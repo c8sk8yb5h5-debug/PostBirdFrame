@@ -175,7 +175,7 @@ private fun FrameMainContent(
                 color = Color(0xFF2E3A32)
             )
             Text(
-                text = "MatePad 横屏播放端 · 第二轮本地设置保存",
+                text = "MatePad 横屏播放端 · 第三轮加密设置保存",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF637568)
             )
@@ -189,13 +189,9 @@ private fun FrameMainContent(
                 .padding(horizontal = 96.dp, vertical = 72.dp)
         ) {
             val mediaModifier = if (maxWidth / maxHeight > 1.8f) {
-                Modifier
-                    .fillMaxHeight(0.72f)
-                    .aspectRatio(16f / 10f)
+                Modifier.fillMaxHeight(0.72f).aspectRatio(16f / 10f)
             } else {
-                Modifier
-                    .fillMaxWidth(0.72f)
-                    .aspectRatio(16f / 10f)
+                Modifier.fillMaxWidth(0.72f).aspectRatio(16f / 10f)
             }
 
             EmptyMediaCard(
@@ -246,7 +242,7 @@ private fun EmptyMediaCard(
                 )
 
                 Text(
-                    text = "手机端发送照片或视频后，会自动进入这里播放。\n第二轮用于验证邮箱设置的本地保存、读取与清除。",
+                    text = "手机端发送照片或视频后，会自动进入这里播放。\n第三轮用于验证邮箱设置的加密保存、读取与清除。",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFF66756A),
                     textAlign = TextAlign.Center
@@ -277,31 +273,8 @@ private fun PostBirdPlaceholder() {
                 .padding(top = 35.dp),
             horizontalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(Color.White, CircleShape)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(5.dp)
-                        .background(Color(0xFF2E3A32), CircleShape)
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(Color.White, CircleShape)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(5.dp)
-                        .background(Color(0xFF2E3A32), CircleShape)
-                )
-            }
+            EyeDot()
+            EyeDot()
         }
 
         Card(
@@ -326,6 +299,22 @@ private fun PostBirdPlaceholder() {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun EyeDot() {
+    Box(
+        modifier = Modifier
+            .size(12.dp)
+            .background(Color.White, CircleShape)
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(5.dp)
+                .background(Color(0xFF2E3A32), CircleShape)
+        )
     }
 }
 
@@ -363,7 +352,11 @@ private fun SettingsPanel(
     var lastSavedAt by remember { mutableStateOf(initialSettings.lastSavedAt) }
     var statusMessage by remember {
         mutableStateOf(
-            if (initialSettings.hasMailConfig) "已配置，尚未连接" else "未配置"
+            when {
+                !store.isSecureStorageReady() -> store.getStorageStatusText()
+                initialSettings.hasMailConfig -> "已配置，尚未连接"
+                else -> "未配置"
+            }
         )
     }
 
@@ -387,7 +380,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "邮箱配置已支持本地保存",
+                        text = "邮箱配置已升级为加密保存",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF6F7A70)
                     )
@@ -443,7 +436,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "本轮保存开关状态，暂不执行真实邮箱检查。",
+                        text = "本轮加密保存开关状态，暂不执行真实邮箱检查。",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF6F7A70)
                     )
@@ -457,8 +450,13 @@ private fun SettingsPanel(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = {
+                        if (!store.isSecureStorageReady()) {
+                            statusMessage = "加密存储不可用，未保存配置"
+                            return@Button
+                        }
+
                         val now = System.currentTimeMillis()
-                        store.save(
+                        val success = store.save(
                             MailSettings(
                                 email = email.trim(),
                                 authCode = authCode,
@@ -466,38 +464,41 @@ private fun SettingsPanel(
                                 lastSavedAt = now
                             )
                         )
-                        lastSavedAt = now
-                        statusMessage = if (email.isNotBlank() && authCode.isNotBlank()) {
-                            "设置已保存，已配置，尚未连接"
+
+                        if (success) {
+                            lastSavedAt = now
+                            statusMessage = if (email.isNotBlank() && authCode.isNotBlank()) {
+                                "设置已加密保存，已配置，尚未连接"
+                            } else {
+                                "设置已加密保存，但邮箱或授权码为空"
+                            }
                         } else {
-                            "设置已保存，但邮箱或授权码为空"
+                            statusMessage = "加密保存失败"
                         }
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Save,
-                        contentDescription = null
-                    )
+                    Icon(imageVector = Icons.Rounded.Save, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("保存设置")
                 }
 
                 OutlinedButton(
                     onClick = {
-                        store.clear()
-                        email = ""
-                        authCode = ""
-                        autoCheckEnabled = true
-                        lastSavedAt = 0L
-                        statusMessage = "配置已清除"
+                        val success = store.clear()
+                        if (success || !store.isSecureStorageReady()) {
+                            email = ""
+                            authCode = ""
+                            autoCheckEnabled = true
+                            lastSavedAt = 0L
+                            statusMessage = if (success) "配置已清除" else store.getStorageStatusText()
+                        } else {
+                            statusMessage = "清除配置失败"
+                        }
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DeleteOutline,
-                        contentDescription = null
-                    )
+                    Icon(imageVector = Icons.Rounded.DeleteOutline, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("清除配置")
                 }
@@ -508,10 +509,7 @@ private fun SettingsPanel(
                     onClick = { statusMessage = "本轮暂未接入真实邮箱检查" },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Refresh,
-                        contentDescription = null
-                    )
+                    Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("立即检查")
                 }
@@ -520,10 +518,7 @@ private fun SettingsPanel(
                     onClick = { statusMessage = "本轮暂未接入 GitHub Release 更新" },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SystemUpdate,
-                        contentDescription = null
-                    )
+                    Icon(imageVector = Icons.Rounded.SystemUpdate, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("检查更新")
                 }
@@ -532,25 +527,25 @@ private fun SettingsPanel(
             StatusCard(
                 title = "邮箱状态",
                 value = statusMessage,
-                note = "第二轮只保存配置，不执行真实 IMAP 登录。"
+                note = "第三轮只升级加密保存，不执行真实 IMAP 登录。"
             )
 
             StatusCard(
                 title = "上次保存时间",
                 value = formatSavedTime(lastSavedAt),
-                note = "重启 APP 后应能读取上次保存的邮箱配置。"
+                note = "重启 APP 后应能读取加密保存的邮箱配置。"
             )
 
             StatusCard(
                 title = "当前版本",
                 value = "1.0.0",
-                note = "下一轮再接入真实邮箱连接或加密存储。"
+                note = "下一轮再接入真实邮箱连接或自动检查。"
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
             Text(
-                text = "安全提示：本轮使用 Android SharedPreferences 保存配置，后续将升级为 Android KeyStore 加密存储。不要把真实授权码写入代码或 GitHub。",
+                text = "安全提示：本轮使用 AndroidX Security Crypto 的 EncryptedSharedPreferences 保存配置。不要把真实授权码写入代码或 GitHub。",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF8A6D3B)
             )

@@ -1,0 +1,51 @@
+# Android / Gradle
+.gradle/
+build/
+*/build/
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# APK / AAB build outputs
+*.apk
+*.aab
+
+# Keystore / signing files
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Environment / secrets
+.env
+.env.*
+*.env
+secrets.properties
+secret.properties
+credentials.json
+tokens.json
+
+# Email / private config
+mail-config.json
+email-config.json
+smtp-config.json
+imap-config.json
+qq-mail-config.json
+
+# Logs
+*.log
+logs/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Node / frontend preview
+node_modules/
+dist/
+.vite/

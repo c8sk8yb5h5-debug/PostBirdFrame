@@ -23,12 +23,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Visibility
@@ -44,7 +47,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,12 +58,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.postbird.frame.matepad.settings.MailSettings
+import com.postbird.frame.matepad.settings.MailSettingsStore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -127,9 +135,7 @@ private fun MatePadFrameScreen() {
                 .fillMaxSize()
                 .zIndex(2f)
         ) {
-            SettingsOverlay(
-                onClose = { settingsVisible = false }
-            )
+            SettingsOverlay(onClose = { settingsVisible = false })
         }
 
         FloatingActionButton(
@@ -169,7 +175,7 @@ private fun FrameMainContent(
                 color = Color(0xFF2E3A32)
             )
             Text(
-                text = "MatePad 横屏播放端 · 第一轮 MVP 骨架",
+                text = "MatePad 横屏播放端 · 第二轮本地设置保存",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF637568)
             )
@@ -240,7 +246,7 @@ private fun EmptyMediaCard(
                 )
 
                 Text(
-                    text = "手机端发送照片或视频后，会自动进入这里播放。\n当前页面用于验证横屏、比例保持、设置覆盖层和基础交互。",
+                    text = "手机端发送照片或视频后，会自动进入这里播放。\n第二轮用于验证邮箱设置的本地保存、读取与清除。",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFF66756A),
                     textAlign = TextAlign.Center
@@ -335,7 +341,7 @@ private fun SettingsOverlay(onClose: () -> Unit) {
             onClose = onClose,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .width(456.dp)
+                .widthIn(min = 456.dp, max = 520.dp)
                 .fillMaxHeight()
         )
     }
@@ -346,10 +352,20 @@ private fun SettingsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var email by remember { mutableStateOf("") }
-    var authCode by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val store = remember(context) { MailSettingsStore(context) }
+    val initialSettings = remember { store.load() }
+
+    var email by remember { mutableStateOf(initialSettings.email) }
+    var authCode by remember { mutableStateOf(initialSettings.authCode) }
     var authCodeVisible by remember { mutableStateOf(false) }
-    var autoCheckEnabled by remember { mutableStateOf(true) }
+    var autoCheckEnabled by remember { mutableStateOf(initialSettings.autoCheckEnabled) }
+    var lastSavedAt by remember { mutableStateOf(initialSettings.lastSavedAt) }
+    var statusMessage by remember {
+        mutableStateOf(
+            if (initialSettings.hasMailConfig) "已配置，尚未连接" else "未配置"
+        )
+    }
 
     Card(
         modifier = modifier,
@@ -361,11 +377,9 @@ private fun SettingsPanel(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(26.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "设置",
@@ -373,7 +387,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "邮箱接收与版本更新",
+                        text = "邮箱配置已支持本地保存",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF6F7A70)
                     )
@@ -429,7 +443,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "本轮仅为 UI 占位，尚未连接真实邮箱",
+                        text = "本轮保存开关状态，暂不执行真实邮箱检查。",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF6F7A70)
                     )
@@ -442,7 +456,56 @@ private fun SettingsPanel(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
-                    onClick = { },
+                    onClick = {
+                        val now = System.currentTimeMillis()
+                        store.save(
+                            MailSettings(
+                                email = email.trim(),
+                                authCode = authCode,
+                                autoCheckEnabled = autoCheckEnabled,
+                                lastSavedAt = now
+                            )
+                        )
+                        lastSavedAt = now
+                        statusMessage = if (email.isNotBlank() && authCode.isNotBlank()) {
+                            "设置已保存，已配置，尚未连接"
+                        } else {
+                            "设置已保存，但邮箱或授权码为空"
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Save,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("保存设置")
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        store.clear()
+                        email = ""
+                        authCode = ""
+                        autoCheckEnabled = true
+                        lastSavedAt = 0L
+                        statusMessage = "配置已清除"
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.DeleteOutline,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("清除配置")
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = { statusMessage = "本轮暂未接入真实邮箱检查" },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -454,7 +517,7 @@ private fun SettingsPanel(
                 }
 
                 OutlinedButton(
-                    onClick = { },
+                    onClick = { statusMessage = "本轮暂未接入 GitHub Release 更新" },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -468,26 +531,26 @@ private fun SettingsPanel(
 
             StatusCard(
                 title = "邮箱状态",
-                value = "未连接",
-                note = "保存邮箱配置后，后续阶段接入 IMAP 自动检查。"
+                value = statusMessage,
+                note = "第二轮只保存配置，不执行真实 IMAP 登录。"
             )
 
             StatusCard(
-                title = "上次检查时间",
-                value = "暂无",
-                note = "第一轮 MVP 暂不执行真实后台检查。"
+                title = "上次保存时间",
+                value = formatSavedTime(lastSavedAt),
+                note = "重启 APP 后应能读取上次保存的邮箱配置。"
             )
 
             StatusCard(
                 title = "当前版本",
                 value = "1.0.0",
-                note = "后续通过 GitHub Public Release 检查 MatePad 端 APK。"
+                note = "下一轮再接入真实邮箱连接或加密存储。"
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
             Text(
-                text = "安全规则：真实邮箱、授权码、GitHub token 不得写入代码或仓库。",
+                text = "安全提示：本轮使用 Android SharedPreferences 保存配置，后续将升级为 Android KeyStore 加密存储。不要把真实授权码写入代码或 GitHub。",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF8A6D3B)
             )
@@ -525,4 +588,9 @@ private fun StatusCard(
             color = Color(0xFF6F7A70)
         )
     }
+}
+
+private fun formatSavedTime(timestamp: Long): String {
+    if (timestamp <= 0L) return "暂无"
+    return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(timestamp))
 }

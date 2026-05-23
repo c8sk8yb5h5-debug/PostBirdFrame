@@ -1,0 +1,59 @@
+name: Build Mobile Release APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile-app/**"
+      - ".github/workflows/build-mobile-release-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-mobile-release-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Restore release keystore
+        working-directory: mobile-app
+        run: |
+          echo "${{ secrets.MOBILE_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+          cat > release-signing.properties <<EOF
+          storeFile=release-keystore.jks
+          storePassword=${{ secrets.MOBILE_RELEASE_STORE_PASSWORD }}
+          keyAlias=${{ secrets.MOBILE_RELEASE_KEY_ALIAS }}
+          keyPassword=${{ secrets.MOBILE_RELEASE_KEY_PASSWORD }}
+          EOF
+
+      - name: Build release APK
+        working-directory: mobile-app
+        run: gradle clean assembleRelease
+
+      - name: Rename release APK
+        run: |
+          mkdir -p release-output
+          cp mobile-app/app/build/outputs/apk/release/app-release.apk release-output/postbird-mobile-release.apk
+          sha256sum release-output/postbird-mobile-release.apk > release-output/postbird-mobile-release.sha256
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postbird-mobile-release-apk
+          path: release-output/

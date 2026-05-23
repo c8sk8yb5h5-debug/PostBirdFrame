@@ -1,0 +1,8 @@
+{
+  "versionName": "0.2.0",
+  "versionCode": 2,
+  "apkUrl": "",
+  "sha256": "",
+  "forceUpdate": false,
+  "releaseNotes": "手机端增加联网检查更新入口。"
+}

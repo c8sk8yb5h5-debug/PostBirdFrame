@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
@@ -52,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,11 +67,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.postbird.frame.matepad.mail.QqMailConnectionTester
 import com.postbird.frame.matepad.settings.MailSettings
 import com.postbird.frame.matepad.settings.MailSettingsStore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,7 +141,9 @@ private fun MatePadFrameScreen() {
                 .fillMaxSize()
                 .zIndex(2f)
         ) {
-            SettingsOverlay(onClose = { settingsVisible = false })
+            SettingsOverlay(
+                onClose = { settingsVisible = false }
+            )
         }
 
         FloatingActionButton(
@@ -175,7 +183,7 @@ private fun FrameMainContent(
                 color = Color(0xFF2E3A32)
             )
             Text(
-                text = "MatePad 横屏播放端 · 第三轮加密设置保存",
+                text = "MatePad 横屏播放端 · 第四轮邮箱连接测试",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF637568)
             )
@@ -189,9 +197,13 @@ private fun FrameMainContent(
                 .padding(horizontal = 96.dp, vertical = 72.dp)
         ) {
             val mediaModifier = if (maxWidth / maxHeight > 1.8f) {
-                Modifier.fillMaxHeight(0.72f).aspectRatio(16f / 10f)
+                Modifier
+                    .fillMaxHeight(0.72f)
+                    .aspectRatio(16f / 10f)
             } else {
-                Modifier.fillMaxWidth(0.72f).aspectRatio(16f / 10f)
+                Modifier
+                    .fillMaxWidth(0.72f)
+                    .aspectRatio(16f / 10f)
             }
 
             EmptyMediaCard(
@@ -242,7 +254,7 @@ private fun EmptyMediaCard(
                 )
 
                 Text(
-                    text = "手机端发送照片或视频后，会自动进入这里播放。\n第三轮用于验证邮箱设置的加密保存、读取与清除。",
+                    text = "手机端发送照片或视频后，会自动进入这里播放。\n第四轮用于验证 QQ 邮箱 IMAP 连接。",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFF66756A),
                     textAlign = TextAlign.Center
@@ -273,8 +285,31 @@ private fun PostBirdPlaceholder() {
                 .padding(top = 35.dp),
             horizontalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            EyeDot()
-            EyeDot()
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(Color.White, CircleShape)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(5.dp)
+                        .background(Color(0xFF2E3A32), CircleShape)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(Color.White, CircleShape)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(5.dp)
+                        .background(Color(0xFF2E3A32), CircleShape)
+                )
+            }
         }
 
         Card(
@@ -303,22 +338,6 @@ private fun PostBirdPlaceholder() {
 }
 
 @Composable
-private fun EyeDot() {
-    Box(
-        modifier = Modifier
-            .size(12.dp)
-            .background(Color.White, CircleShape)
-    ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(5.dp)
-                .background(Color(0xFF2E3A32), CircleShape)
-        )
-    }
-}
-
-@Composable
 private fun SettingsOverlay(onClose: () -> Unit) {
     Box(
         modifier = Modifier
@@ -330,7 +349,7 @@ private fun SettingsOverlay(onClose: () -> Unit) {
             onClose = onClose,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .widthIn(min = 456.dp, max = 520.dp)
+                .widthIn(min = 456.dp, max = 540.dp)
                 .fillMaxHeight()
         )
     }
@@ -343,6 +362,8 @@ private fun SettingsPanel(
 ) {
     val context = LocalContext.current
     val store = remember(context) { MailSettingsStore(context) }
+    val connectionTester = remember { QqMailConnectionTester() }
+    val coroutineScope = rememberCoroutineScope()
     val initialSettings = remember { store.load() }
 
     var email by remember { mutableStateOf(initialSettings.email) }
@@ -350,6 +371,7 @@ private fun SettingsPanel(
     var authCodeVisible by remember { mutableStateOf(false) }
     var autoCheckEnabled by remember { mutableStateOf(initialSettings.autoCheckEnabled) }
     var lastSavedAt by remember { mutableStateOf(initialSettings.lastSavedAt) }
+    var isTestingConnection by remember { mutableStateOf(false) }
     var statusMessage by remember {
         mutableStateOf(
             when {
@@ -370,9 +392,11 @@ private fun SettingsPanel(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(26.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "设置",
@@ -380,7 +404,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "邮箱配置已升级为加密保存",
+                        text = "加密配置与 QQ 邮箱连接测试",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF6F7A70)
                     )
@@ -436,7 +460,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "本轮加密保存开关状态，暂不执行真实邮箱检查。",
+                        text = "本轮仅测试邮箱连接，暂不执行自动检查。",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF6F7A70)
                     )
@@ -476,9 +500,13 @@ private fun SettingsPanel(
                             statusMessage = "加密保存失败"
                         }
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = !isTestingConnection
                 ) {
-                    Icon(imageVector = Icons.Rounded.Save, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Rounded.Save,
+                        contentDescription = null
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("保存设置")
                 }
@@ -496,29 +524,100 @@ private fun SettingsPanel(
                             statusMessage = "清除配置失败"
                         }
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = !isTestingConnection
                 ) {
-                    Icon(imageVector = Icons.Rounded.DeleteOutline, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Rounded.DeleteOutline,
+                        contentDescription = null
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("清除配置")
                 }
             }
 
+            Button(
+                onClick = {
+                    if (!store.isSecureStorageReady()) {
+                        statusMessage = "加密存储不可用，无法测试邮箱连接"
+                        return@Button
+                    }
+
+                    if (email.isBlank() || authCode.isBlank()) {
+                        statusMessage = "邮箱或授权码为空"
+                        return@Button
+                    }
+
+                    if (!email.trim().endsWith("@qq.com", ignoreCase = true)) {
+                        statusMessage = "当前仅支持 QQ 邮箱"
+                        return@Button
+                    }
+
+                    val now = System.currentTimeMillis()
+                    val saved = store.save(
+                        MailSettings(
+                            email = email.trim(),
+                            authCode = authCode,
+                            autoCheckEnabled = autoCheckEnabled,
+                            lastSavedAt = now
+                        )
+                    )
+
+                    if (!saved) {
+                        statusMessage = "加密保存失败，未开始连接测试"
+                        return@Button
+                    }
+
+                    lastSavedAt = now
+                    isTestingConnection = true
+                    statusMessage = "正在测试邮箱连接..."
+
+                    coroutineScope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            connectionTester.testConnection(
+                                email = email.trim(),
+                                authCode = authCode
+                            )
+                        }
+
+                        isTestingConnection = false
+                        statusMessage = result.message
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isTestingConnection
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MarkEmailRead,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (isTestingConnection) "正在测试邮箱连接..." else "测试邮箱连接")
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { statusMessage = "本轮暂未接入真实邮箱检查" },
-                    modifier = Modifier.weight(1f)
+                    onClick = { statusMessage = "本轮暂未接入自动检查和附件下载" },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isTestingConnection
                 ) {
-                    Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = null
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("立即检查")
                 }
 
                 OutlinedButton(
                     onClick = { statusMessage = "本轮暂未接入 GitHub Release 更新" },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = !isTestingConnection
                 ) {
-                    Icon(imageVector = Icons.Rounded.SystemUpdate, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Rounded.SystemUpdate,
+                        contentDescription = null
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("检查更新")
                 }
@@ -527,25 +626,25 @@ private fun SettingsPanel(
             StatusCard(
                 title = "邮箱状态",
                 value = statusMessage,
-                note = "第三轮只升级加密保存，不执行真实 IMAP 登录。"
+                note = "第四轮只测试 IMAP 登录和收件箱访问，不下载附件。"
             )
 
             StatusCard(
                 title = "上次保存时间",
                 value = formatSavedTime(lastSavedAt),
-                note = "重启 APP 后应能读取加密保存的邮箱配置。"
+                note = "测试连接前会先保存当前邮箱配置。"
             )
 
             StatusCard(
                 title = "当前版本",
                 value = "1.0.0",
-                note = "下一轮再接入真实邮箱连接或自动检查。"
+                note = "下一轮再接入 15 分钟自动检查。"
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
             Text(
-                text = "安全提示：本轮使用 AndroidX Security Crypto 的 EncryptedSharedPreferences 保存配置。不要把真实授权码写入代码或 GitHub。",
+                text = "安全提示：测试连接只使用本机输入的 QQ 邮箱和授权码，不会读取正文、下载附件、删除或移动邮件。",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF8A6D3B)
             )

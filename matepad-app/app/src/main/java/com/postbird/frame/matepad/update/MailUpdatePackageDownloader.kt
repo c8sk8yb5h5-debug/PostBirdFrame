@@ -6,7 +6,6 @@ import java.io.File
 import java.net.SocketTimeoutException
 import java.util.Properties
 import javax.mail.AuthenticationFailedException
-import javax.mail.BodyPart
 import javax.mail.Folder
 import javax.mail.Message
 import javax.mail.MessagingException
@@ -20,7 +19,7 @@ class MailUpdatePackageDownloader {
         email: String,
         authCode: String,
         currentVersionCode: Int,
-        maxMessages: Int = 30
+        maxMessages: Int = 10
     ): MailUpdateInfo {
         val normalizedEmail = email.trim()
         if (normalizedEmail.isBlank() || authCode.isBlank()) {
@@ -35,9 +34,12 @@ class MailUpdatePackageDownloader {
             put("mail.imaps.host", QQ_IMAP_HOST)
             put("mail.imaps.port", QQ_IMAP_PORT.toString())
             put("mail.imaps.ssl.enable", "true")
-            put("mail.imaps.connectiontimeout", TIMEOUT_MS.toString())
-            put("mail.imaps.timeout", TIMEOUT_MS.toString())
-            put("mail.imaps.writetimeout", TIMEOUT_MS.toString())
+            put("mail.imaps.connectiontimeout", CONNECT_TIMEOUT_MS.toString())
+            put("mail.imaps.timeout", READ_TIMEOUT_MS.toString())
+            put("mail.imaps.writetimeout", READ_TIMEOUT_MS.toString())
+            put("mail.imaps.partialfetch", "false")
+            put("mail.imaps.fetchsize", FETCH_SIZE_BYTES.toString())
+            put("mail.imaps.connectionpooltimeout", READ_TIMEOUT_MS.toString())
         }
 
         var store: javax.mail.Store? = null
@@ -80,11 +82,17 @@ class MailUpdatePackageDownloader {
         } catch (error: AuthenticationFailedException) {
             MailUpdateInfo(false, "邮箱授权码错误或 IMAP 未开启")
         } catch (error: SocketTimeoutException) {
-            MailUpdateInfo(false, "邮箱连接超时")
+            MailUpdateInfo(false, "邮箱连接或附件下载超时")
         } catch (error: MessagingException) {
             MailUpdateInfo(false, "邮箱更新检查失败：${error.message.orEmpty().ifBlank { "未知错误" }}")
         } catch (error: Exception) {
-            MailUpdateInfo(false, "邮箱更新失败：${error.javaClass.simpleName}")
+            val type = error.javaClass.simpleName
+            val hint = if (type.contains("FolderClosed", ignoreCase = true)) {
+                "，可能是 QQ 邮箱在读取大附件时断开连接，请重试或发送更新邮件到收件箱顶部"
+            } else {
+                ""
+            }
+            MailUpdateInfo(false, "邮箱更新失败：$type$hint")
         } finally {
             try { inbox?.close(false) } catch (_: Exception) {}
             try { store?.close() } catch (_: Exception) {}
@@ -128,7 +136,13 @@ class MailUpdatePackageDownloader {
 
         part.inputStream.use { input ->
             outputFile.outputStream().use { output ->
-                input.copyTo(output)
+                val buffer = ByteArray(COPY_BUFFER_BYTES)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                }
+                output.flush()
             }
         }
         return outputFile
@@ -144,7 +158,10 @@ class MailUpdatePackageDownloader {
     companion object {
         private const val QQ_IMAP_HOST = "imap.qq.com"
         private const val QQ_IMAP_PORT = 993
-        private const val TIMEOUT_MS = 20000
+        private const val CONNECT_TIMEOUT_MS = 30000
+        private const val READ_TIMEOUT_MS = 180000
+        private const val FETCH_SIZE_BYTES = 1048576
+        private const val COPY_BUFFER_BYTES = 65536
         private const val UPDATE_SUBJECT_KEY = "PostBirdFrame Update"
     }
 }

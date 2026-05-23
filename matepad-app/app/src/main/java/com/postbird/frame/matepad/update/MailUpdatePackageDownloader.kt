@@ -6,6 +6,7 @@ import java.io.File
 import java.net.SocketTimeoutException
 import java.util.Properties
 import javax.mail.AuthenticationFailedException
+import javax.mail.FetchProfile
 import javax.mail.Folder
 import javax.mail.Message
 import javax.mail.MessagingException
@@ -19,7 +20,7 @@ class MailUpdatePackageDownloader {
         email: String,
         authCode: String,
         currentVersionCode: Int,
-        maxMessages: Int = 10
+        maxMessages: Int = 6
     ): MailUpdateInfo {
         val normalizedEmail = email.trim()
         if (normalizedEmail.isBlank() || authCode.isBlank()) {
@@ -55,9 +56,13 @@ class MailUpdatePackageDownloader {
             val total = inbox.messageCount
             if (total <= 0) return MailUpdateInfo(false, "收件箱暂无邮件")
             val start = (total - maxMessages + 1).coerceAtLeast(1)
-            val messages = inbox.getMessages(start, total).reversed()
+            val messages = inbox.getMessages(start, total)
+            inbox.fetch(messages, FetchProfile().apply {
+                add(FetchProfile.Item.ENVELOPE)
+                add(FetchProfile.Item.FLAGS)
+            })
 
-            for (message in messages) {
+            for (message in messages.reversed()) {
                 val subject = message.subject.orEmpty()
                 if (!subject.contains(UPDATE_SUBJECT_KEY, ignoreCase = true)) continue
                 if (!isFromBoundEmail(message, normalizedEmail)) continue

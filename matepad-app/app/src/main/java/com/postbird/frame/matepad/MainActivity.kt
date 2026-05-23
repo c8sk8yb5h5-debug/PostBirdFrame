@@ -1,6 +1,7 @@
 package com.postbird.frame.matepad
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -24,9 +25,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -365,6 +368,7 @@ private fun SettingsPanel(
     val connectionTester = remember { QqMailConnectionTester() }
     val coroutineScope = rememberCoroutineScope()
     val initialSettings = remember { store.load() }
+    val scrollState = rememberScrollState()
 
     var email by remember { mutableStateOf(initialSettings.email) }
     var authCode by remember { mutableStateOf(initialSettings.authCode) }
@@ -382,6 +386,11 @@ private fun SettingsPanel(
         )
     }
 
+    fun showStatus(message: String) {
+        statusMessage = message
+        Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
+    }
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(32.dp),
@@ -391,6 +400,7 @@ private fun SettingsPanel(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(26.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -417,6 +427,12 @@ private fun SettingsPanel(
                     )
                 }
             }
+
+            StatusCard(
+                title = "当前提示",
+                value = statusMessage,
+                note = "测试结果会显示在这里，同时弹出系统提示。"
+            )
 
             OutlinedTextField(
                 value = email,
@@ -475,7 +491,7 @@ private fun SettingsPanel(
                 Button(
                     onClick = {
                         if (!store.isSecureStorageReady()) {
-                            statusMessage = "加密存储不可用，未保存配置"
+                            showStatus("加密存储不可用，未保存配置")
                             return@Button
                         }
 
@@ -491,13 +507,15 @@ private fun SettingsPanel(
 
                         if (success) {
                             lastSavedAt = now
-                            statusMessage = if (email.isNotBlank() && authCode.isNotBlank()) {
-                                "设置已加密保存，已配置，尚未连接"
-                            } else {
-                                "设置已加密保存，但邮箱或授权码为空"
-                            }
+                            showStatus(
+                                if (email.isNotBlank() && authCode.isNotBlank()) {
+                                    "设置已加密保存，已配置，尚未连接"
+                                } else {
+                                    "设置已加密保存，但邮箱或授权码为空"
+                                }
+                            )
                         } else {
-                            statusMessage = "加密保存失败"
+                            showStatus("加密保存失败")
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -519,9 +537,9 @@ private fun SettingsPanel(
                             authCode = ""
                             autoCheckEnabled = true
                             lastSavedAt = 0L
-                            statusMessage = if (success) "配置已清除" else store.getStorageStatusText()
+                            showStatus(if (success) "配置已清除" else store.getStorageStatusText())
                         } else {
-                            statusMessage = "清除配置失败"
+                            showStatus("清除配置失败")
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -539,17 +557,17 @@ private fun SettingsPanel(
             Button(
                 onClick = {
                     if (!store.isSecureStorageReady()) {
-                        statusMessage = "加密存储不可用，无法测试邮箱连接"
+                        showStatus("加密存储不可用，无法测试邮箱连接")
                         return@Button
                     }
 
                     if (email.isBlank() || authCode.isBlank()) {
-                        statusMessage = "邮箱或授权码为空"
+                        showStatus("邮箱或授权码为空")
                         return@Button
                     }
 
                     if (!email.trim().endsWith("@qq.com", ignoreCase = true)) {
-                        statusMessage = "当前仅支持 QQ 邮箱"
+                        showStatus("当前仅支持 QQ 邮箱")
                         return@Button
                     }
 
@@ -564,13 +582,13 @@ private fun SettingsPanel(
                     )
 
                     if (!saved) {
-                        statusMessage = "加密保存失败，未开始连接测试"
+                        showStatus("加密保存失败，未开始连接测试")
                         return@Button
                     }
 
                     lastSavedAt = now
                     isTestingConnection = true
-                    statusMessage = "正在测试邮箱连接..."
+                    showStatus("正在测试邮箱连接...")
 
                     coroutineScope.launch {
                         val result = withContext(Dispatchers.IO) {
@@ -581,7 +599,7 @@ private fun SettingsPanel(
                         }
 
                         isTestingConnection = false
-                        statusMessage = result.message
+                        showStatus(result.message)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -597,7 +615,7 @@ private fun SettingsPanel(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { statusMessage = "本轮暂未接入自动检查和附件下载" },
+                    onClick = { showStatus("本轮暂未接入自动检查和附件下载") },
                     modifier = Modifier.weight(1f),
                     enabled = !isTestingConnection
                 ) {
@@ -610,7 +628,7 @@ private fun SettingsPanel(
                 }
 
                 OutlinedButton(
-                    onClick = { statusMessage = "本轮暂未接入 GitHub Release 更新" },
+                    onClick = { showStatus("本轮暂未接入 GitHub Release 更新") },
                     modifier = Modifier.weight(1f),
                     enabled = !isTestingConnection
                 ) {

@@ -1,5 +1,6 @@
 package com.postbird.frame.matepad
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -73,6 +74,7 @@ import androidx.compose.ui.zIndex
 import com.postbird.frame.matepad.mail.QqMailConnectionTester
 import com.postbird.frame.matepad.settings.MailSettings
 import com.postbird.frame.matepad.settings.MailSettingsStore
+import com.postbird.frame.matepad.update.UpdateActivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -186,7 +188,7 @@ private fun FrameMainContent(
                 color = Color(0xFF2E3A32)
             )
             Text(
-                text = "MatePad 横屏播放端 · 第四轮邮箱连接测试",
+                text = "MatePad 横屏播放端 · 联网更新基础版",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF637568)
             )
@@ -257,7 +259,7 @@ private fun EmptyMediaCard(
                 )
 
                 Text(
-                    text = "手机端发送照片或视频后，会自动进入这里播放。\n第四轮用于验证 QQ 邮箱 IMAP 连接。",
+                    text = "手机端发送照片或视频后，会自动进入这里播放。\n本版已接入 GitHub Release 联网更新入口。",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFF66756A),
                     textAlign = TextAlign.Center
@@ -414,7 +416,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "加密配置与 QQ 邮箱连接测试",
+                        text = "邮箱配置、连接测试与联网更新",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF6F7A70)
                     )
@@ -476,7 +478,7 @@ private fun SettingsPanel(
                         color = Color(0xFF2E3A32)
                     )
                     Text(
-                        text = "本轮仅测试邮箱连接，暂不执行自动检查。",
+                        text = "当前仍保留开关，自动收取将在后续版本接入。",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF6F7A70)
                     )
@@ -628,7 +630,9 @@ private fun SettingsPanel(
                 }
 
                 OutlinedButton(
-                    onClick = { showStatus("本轮暂未接入 GitHub Release 更新") },
+                    onClick = {
+                        context.startActivity(Intent(context, UpdateActivity::class.java))
+                    },
                     modifier = Modifier.weight(1f),
                     enabled = !isTestingConnection
                 ) {
@@ -644,7 +648,7 @@ private fun SettingsPanel(
             StatusCard(
                 title = "邮箱状态",
                 value = statusMessage,
-                note = "第四轮只测试 IMAP 登录和收件箱访问，不下载附件。"
+                note = "当前支持 IMAP 连接测试；自动下载附件将在后续版本接入。"
             )
 
             StatusCard(
@@ -655,8 +659,8 @@ private fun SettingsPanel(
 
             StatusCard(
                 title = "当前版本",
-                value = "1.0.0",
-                note = "下一轮再接入 15 分钟自动检查。"
+                value = "1.1.0",
+                note = "已接入 GitHub Release 更新基础能力。"
             )
 
             Spacer(modifier = Modifier.weight(1f))

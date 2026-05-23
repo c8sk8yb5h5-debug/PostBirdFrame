@@ -127,7 +127,7 @@ class QqMailAttachmentScanner {
         var imageCount = 0
         var videoCount = 0
 
-        if (Part.ATTACHMENT.equals(part.disposition, ignoreCase = true) || part.fileName != null) {
+        if (hasAttachmentFileName(part)) {
             val fileName = part.fileName.orEmpty()
             val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
             when (extension) {
@@ -136,17 +136,24 @@ class QqMailAttachmentScanner {
             }
         }
 
-        val content = runCatching { part.content }.getOrNull()
-        if (content is Multipart) {
-            for (index in 0 until content.count) {
-                val bodyPart: BodyPart = content.getBodyPart(index)
-                val childCount = countAcceptedAttachments(bodyPart)
-                imageCount += childCount.first
-                videoCount += childCount.second
+        if (part.isMimeType("multipart/*")) {
+            val content = runCatching { part.content }.getOrNull()
+            if (content is Multipart) {
+                for (index in 0 until content.count) {
+                    val bodyPart: BodyPart = content.getBodyPart(index)
+                    val childCount = countAcceptedAttachments(bodyPart)
+                    imageCount += childCount.first
+                    videoCount += childCount.second
+                }
             }
         }
 
         return imageCount to videoCount
+    }
+
+    private fun hasAttachmentFileName(part: Part): Boolean {
+        val disposition = part.disposition.orEmpty()
+        return Part.ATTACHMENT.equals(disposition, ignoreCase = true) || !part.fileName.isNullOrBlank()
     }
 
     companion object {

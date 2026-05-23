@@ -24,8 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 class UpdateActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +42,7 @@ private fun UpdateScreen() {
     val scope = rememberCoroutineScope()
     val coordinator = remember { UpdateCoordinator() }
     val installer = remember { ApkInstallHelper() }
-    var status by remember { mutableStateOf("优先从 QQ 邮箱更新邮件获取 APK；未发现时再尝试 GitHub Release。") }
+    var status by remember { mutableStateOf("APP 内更新只检查 QQ 邮箱更新包。") }
     var busy by remember { mutableStateOf(false) }
 
     Column(
@@ -56,9 +58,20 @@ private fun UpdateScreen() {
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 busy = true
-                status = "正在检查更新..."
+                status = "正在检查 QQ 邮箱更新包，最多等待 2 分钟..."
                 scope.launch {
-                    val result = withContext(Dispatchers.IO) { coordinator.findUpdatePackage(context) }
+                    val result = try {
+                        withContext(Dispatchers.IO) {
+                            withTimeout(UPDATE_TIMEOUT_MS) {
+                                coordinator.findUpdatePackage(context)
+                            }
+                        }
+                    } catch (_: TimeoutCancellationException) {
+                        UpdatePackageResult(false, "QQ 邮箱更新检查超时，请确认网络、邮箱授权码和附件大小", null)
+                    } catch (error: Exception) {
+                        UpdatePackageResult(false, "QQ 邮箱更新检查失败：${error.javaClass.simpleName}", null)
+                    }
+
                     busy = false
                     status = result.message
 
@@ -81,3 +94,5 @@ private fun UpdateScreen() {
         ) { Text(if (busy) "正在处理..." else "检查更新并安装") }
     }
 }
+
+private const val UPDATE_TIMEOUT_MS = 120000L

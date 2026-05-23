@@ -38,10 +38,9 @@ class UpdateActivity : ComponentActivity() {
 private fun UpdateScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val client = remember { GitHubReleaseClient() }
-    val downloader = remember { ApkDownloader() }
+    val coordinator = remember { UpdateCoordinator() }
     val installer = remember { ApkInstallHelper() }
-    var status by remember { mutableStateOf("点击检查更新，APP 会从 GitHub Releases 获取最新 APK。") }
+    var status by remember { mutableStateOf("优先从 QQ 邮箱更新邮件获取 APK；未发现时再尝试 GitHub Release。") }
     var busy by remember { mutableStateOf(false) }
 
     Column(
@@ -59,33 +58,23 @@ private fun UpdateScreen() {
                 busy = true
                 status = "正在检查更新..."
                 scope.launch {
-                    val info = withContext(Dispatchers.IO) { client.checkLatest(context) }
-                    if (info.apkDownloadUrl.isBlank()) {
-                        busy = false
-                        status = info.message
-                        Toast.makeText(context, info.message, Toast.LENGTH_LONG).show()
-                        return@launch
-                    }
-
-                    status = "发现更新，正在下载 APK..."
-                    val apkFile = try {
-                        withContext(Dispatchers.IO) { downloader.download(context, info.apkDownloadUrl) }
-                    } catch (error: Exception) {
-                        busy = false
-                        status = "下载失败：${error.javaClass.simpleName}"
-                        Toast.makeText(context, status, Toast.LENGTH_LONG).show()
-                        return@launch
-                    }
-
+                    val result = withContext(Dispatchers.IO) { coordinator.findUpdatePackage(context) }
                     busy = false
+                    status = result.message
+
+                    if (!result.success || result.apkFile == null) {
+                        Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+
                     if (!installer.canRequestPackageInstalls(context)) {
                         status = "请允许本 APP 安装未知应用，然后返回重新点击检查更新。"
                         Toast.makeText(context, status, Toast.LENGTH_LONG).show()
                         installer.openInstallPermissionSettings(context)
                     } else {
-                        status = "下载完成，正在打开安装界面。"
+                        status = "更新包已准备好，正在打开安装界面。"
                         Toast.makeText(context, status, Toast.LENGTH_LONG).show()
-                        installer.installApk(context, apkFile)
+                        installer.installApk(context, result.apkFile)
                     }
                 }
             }

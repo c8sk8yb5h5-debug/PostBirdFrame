@@ -12,8 +12,8 @@ android {
         applicationId = "com.postbird.frame"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.3.4"
+        versionCode = 9
+        versionName = "1.3.5"
     }
 
     buildFeatures {

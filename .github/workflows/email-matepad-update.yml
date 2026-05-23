@@ -1,0 +1,96 @@
+name: Email MatePad Update APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'matepad-app/**'
+      - '.github/workflows/email-matepad-update.yml'
+
+jobs:
+  email-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+
+      - name: Build MatePad debug APK
+        run: gradle -p matepad-app assembleDebug
+
+      - name: Prepare mail attachment
+        run: |
+          mkdir -p update-mail
+          APK_PATH=$(ls matepad-app/app/build/outputs/apk/debug/*.apk | head -n 1)
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' matepad-app/app/build.gradle.kts | head -n 1)
+          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' matepad-app/app/build.gradle.kts | head -n 1)
+          cp "$APK_PATH" "update-mail/PostBird-MatePad-v${VERSION_NAME}-code${VERSION_CODE}.apk.bin"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "ATTACHMENT_PATH=update-mail/PostBird-MatePad-v${VERSION_NAME}-code${VERSION_CODE}.apk.bin" >> "$GITHUB_ENV"
+
+      - name: Send update mail
+        env:
+          QQ_MAIL_USERNAME: ${{ secrets.QQ_MAIL_USERNAME }}
+          QQ_MAIL_AUTH_CODE: ${{ secrets.QQ_MAIL_AUTH_CODE }}
+          QQ_MAIL_TO: ${{ secrets.QQ_MAIL_TO }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+          ATTACHMENT_PATH: ${{ env.ATTACHMENT_PATH }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import smtplib
+          from email.message import EmailMessage
+          from pathlib import Path
+
+          username = os.environ["QQ_MAIL_USERNAME"]
+          password = os.environ["QQ_MAIL_AUTH_CODE"]
+          recipient = os.environ.get("QQ_MAIL_TO") or username
+          version_name = os.environ["VERSION_NAME"]
+          version_code = os.environ["VERSION_CODE"]
+          attachment_path = Path(os.environ["ATTACHMENT_PATH"])
+
+          subject = f"PostBirdFrame Update v{version_name} code={version_code}"
+          body = "\n".join([
+              f"versionName={version_name}",
+              f"versionCode={version_code}",
+              f"package={attachment_path.name}",
+              "source=GitHub Actions",
+          ])
+
+          message = EmailMessage()
+          message["From"] = username
+          message["To"] = recipient
+          message["Subject"] = subject
+          message.set_content(body)
+
+          data = attachment_path.read_bytes()
+          message.add_attachment(
+              data,
+              maintype="application",
+              subtype="octet-stream",
+              filename=attachment_path.name,
+          )
+
+          with smtplib.SMTP_SSL("smtp.qq.com", 465, timeout=60) as smtp:
+              smtp.login(username, password)
+              smtp.send_message(message)
+          PY

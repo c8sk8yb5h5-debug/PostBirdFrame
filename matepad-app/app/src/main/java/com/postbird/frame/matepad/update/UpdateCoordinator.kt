@@ -9,29 +9,22 @@ class UpdateCoordinator {
         val currentCode = readCurrentVersionCode(context)
         val settings = MailSettingsStore(context).load()
 
-        if (settings.hasMailConfig) {
-            val mailResult = MailUpdatePackageDownloader().downloadLatestUpdate(
-                context = context,
-                email = settings.email,
-                authCode = settings.authCode,
-                currentVersionCode = currentCode
-            )
-            if (mailResult.success && mailResult.apkFile != null) {
-                return UpdatePackageResult(true, mailResult.message, mailResult.apkFile)
-            }
+        if (!settings.hasMailConfig) {
+            return UpdatePackageResult(false, "请先在设置页保存 QQ 邮箱和授权码", null)
         }
 
-        val releaseInfo = GitHubReleaseClient().checkLatest(context)
-        if (releaseInfo.apkDownloadUrl.isBlank()) {
-            return UpdatePackageResult(false, releaseInfo.message, null)
+        val mailResult = MailUpdatePackageDownloader().downloadLatestUpdate(
+            context = context,
+            email = settings.email,
+            authCode = settings.authCode,
+            currentVersionCode = currentCode
+        )
+
+        if (mailResult.success && mailResult.apkFile != null) {
+            return UpdatePackageResult(true, mailResult.message, mailResult.apkFile)
         }
 
-        return try {
-            val file = ApkDownloader().download(context, releaseInfo.apkDownloadUrl)
-            UpdatePackageResult(true, "已从 GitHub Release 下载更新包", file)
-        } catch (error: Exception) {
-            UpdatePackageResult(false, "GitHub 下载失败：${error.javaClass.simpleName}。可改用 QQ 邮箱发送更新包。", null)
-        }
+        return UpdatePackageResult(false, "QQ 邮箱未发现可用更新包：${mailResult.message}", null)
     }
 
     private fun readCurrentVersionCode(context: Context): Int {

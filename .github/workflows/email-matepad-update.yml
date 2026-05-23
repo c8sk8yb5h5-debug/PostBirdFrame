@@ -58,15 +58,27 @@ jobs:
           python3 - <<'PY'
           import os
           import smtplib
+          import ssl
+          import sys
+          import time
           from email.message import EmailMessage
           from pathlib import Path
 
-          username = os.environ["QQ_MAIL_USERNAME"]
-          password = os.environ["QQ_MAIL_AUTH_CODE"]
-          recipient = os.environ.get("QQ_MAIL_TO") or username
-          version_name = os.environ["VERSION_NAME"]
-          version_code = os.environ["VERSION_CODE"]
-          attachment_path = Path(os.environ["ATTACHMENT_PATH"])
+          username = os.environ.get("QQ_MAIL_USERNAME", "").strip()
+          password = os.environ.get("QQ_MAIL_AUTH_CODE", "").strip().replace(" ", "")
+          recipient = (os.environ.get("QQ_MAIL_TO") or username).strip()
+          version_name = os.environ.get("VERSION_NAME", "").strip()
+          version_code = os.environ.get("VERSION_CODE", "").strip()
+          attachment_path = Path(os.environ.get("ATTACHMENT_PATH", ""))
+
+          if not username:
+              raise SystemExit("QQ_MAIL_USERNAME is empty")
+          if not password:
+              raise SystemExit("QQ_MAIL_AUTH_CODE is empty")
+          if not recipient:
+              raise SystemExit("QQ_MAIL_TO is empty")
+          if not attachment_path.exists():
+              raise SystemExit(f"Attachment not found: {attachment_path}")
 
           subject = f"PostBirdFrame Update v{version_name} code={version_code}"
           body = "\n".join([
@@ -81,16 +93,38 @@ jobs:
           message["To"] = recipient
           message["Subject"] = subject
           message.set_content(body)
-
-          data = attachment_path.read_bytes()
           message.add_attachment(
-              data,
+              attachment_path.read_bytes(),
               maintype="application",
               subtype="octet-stream",
               filename=attachment_path.name,
           )
 
-          with smtplib.SMTP_SSL("smtp.qq.com", 465, timeout=60) as smtp:
-              smtp.login(username, password)
-              smtp.send_message(message)
+          def send_with_ssl():
+              with smtplib.SMTP_SSL("smtp.qq.com", 465, timeout=120, context=ssl.create_default_context()) as smtp:
+                  smtp.ehlo()
+                  smtp.login(username, password)
+                  smtp.send_message(message)
+
+          def send_with_starttls():
+              with smtplib.SMTP("smtp.qq.com", 587, timeout=120) as smtp:
+                  smtp.ehlo()
+                  smtp.starttls(context=ssl.create_default_context())
+                  smtp.ehlo()
+                  smtp.login(username, password)
+                  smtp.send_message(message)
+
+          errors = []
+          for sender_name, sender in [("SSL-465", send_with_ssl), ("STARTTLS-587", send_with_starttls)]:
+              try:
+                  print(f"Trying QQ SMTP {sender_name}...")
+                  sender()
+                  print(f"QQ update mail sent by {sender_name}")
+                  sys.exit(0)
+              except Exception as exc:
+                  errors.append(f"{sender_name}: {exc.__class__.__name__}: {exc}")
+                  print(errors[-1])
+                  time.sleep(2)
+
+          raise SystemExit("QQ SMTP send failed. " + " | ".join(errors))
           PY

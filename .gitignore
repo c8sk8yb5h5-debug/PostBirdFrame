@@ -20,6 +20,8 @@ captures/
 *.keystore
 keystore.properties
 signing.properties
+release-signing.properties
+release-keystore.jks
 
 # Environment / secrets
 .env

@@ -33,7 +33,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: mobile-app
-        run: gradle assembleDebug
+        run: gradle clean assembleDebug
 
       - name: Upload mobile APK artifact
         uses: actions/upload-artifact@v4

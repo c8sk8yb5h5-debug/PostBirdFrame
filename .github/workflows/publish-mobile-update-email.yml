@@ -33,6 +33,24 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Patch phone version for IMAP fix
+        working-directory: mobile-app
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/build.gradle.kts')
+          s = p.read_text()
+          s = s.replace('versionCode = 4', 'versionCode = 5')
+          s = s.replace('versionName = "0.4.0"', 'versionName = "0.4.1"')
+          p.write_text(s)
+          r = Path('app/src/main/java/com/postbird/mobile/PhoneUpdateRules.kt')
+          t = r.read_text()
+          t = t.replace('CURRENT_VERSION_CODE = 4', 'CURRENT_VERSION_CODE = 5')
+          t = t.replace('CURRENT_VERSION_NAME = "0.4.0"', 'CURRENT_VERSION_NAME = "0.4.1"')
+          r.write_text(t)
+          PY
+
       - name: Restore shared PostBird release keystore
         working-directory: mobile-app
         shell: bash
@@ -78,7 +96,7 @@ jobs:
             "originalApkName": "${APK_NAME}",
             "sha256": "${SHA256}",
             "forceUpdate": false,
-            "releaseNotes": "手机端固定 release 签名更新包 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。"
+            "releaseNotes": "手机端 IMAP 连接修复版本 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。"
           }
           EOF
           cat > release-output/postbird-phone-update-email.txt <<EOF
@@ -92,7 +110,7 @@ jobs:
           originalApkName=${APK_NAME}
           sha256=${SHA256}
           forceUpdate=false
-          releaseNotes=手机端固定 release 签名更新包 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。
+          releaseNotes=手机端 IMAP 连接修复版本 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。
           EOF
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
@@ -111,7 +129,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK_PATH" --clobber
           else
-            gh release create "$TAG" "$APK_PATH" --title "PostBird Phone ${{ steps.release_info.outputs.version_name }}" --notes "手机端固定签名 release 版本 ${{ steps.release_info.outputs.version_name }}。邮箱更新以 .apk.bin 附件为准，GitHub Release 仅作为备份。"
+            gh release create "$TAG" "$APK_PATH" --title "PostBird Phone ${{ steps.release_info.outputs.version_name }}" --notes "手机端 IMAP 连接修复版本 ${{ steps.release_info.outputs.version_name }}。邮箱更新以 .apk.bin 附件为准，GitHub Release 仅作为备份。"
           fi
 
       - name: Commit latest.json
@@ -124,7 +142,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "latest.json unchanged"
           else
-            git commit -m "Update phone signed email attachment manifest"
+            git commit -m "Update phone IMAP fix manifest"
             git pull --rebase origin main || true
             git push || echo "latest.json push skipped; email delivery will continue"
           fi
@@ -152,7 +170,7 @@ jobs:
             originalApkName=${{ steps.release_info.outputs.apk_name }}
             sha256=${{ steps.release_info.outputs.sha256 }}
             forceUpdate=false
-            releaseNotes=手机端固定 release 签名更新包 ${{ steps.release_info.outputs.version_name }}，APK 已作为 .apk.bin 邮件附件发送。
+            releaseNotes=手机端 IMAP 连接修复版本 ${{ steps.release_info.outputs.version_name }}，APK 已作为 .apk.bin 邮件附件发送。
 
       - name: Upload signed update artifact
         uses: actions/upload-artifact@v4

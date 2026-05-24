@@ -1,12 +1,8 @@
 {
-  "type": "POSTBIRD_UPDATE",
-  "target": "mobile",
-  "delivery": "qq_email_attachment_bin",
   "versionName": "0.2.0",
   "versionCode": 2,
-  "attachmentName": "postbird-mobile-v0.2.0.apk.bin",
-  "originalApkName": "postbird-mobile-v0.2.0.apk",
-  "sha256": "0ce08c6a8e17437aba8b12b1ec49c4aeb3607533d8879f5caaabe22642fc6c49",
+  "apkUrl": "https://github.com/c8sk8yb5h5-debug/PostBirdFrame/releases/download/mobile-v0.2.0/postbird-mobile-v0.2.0.apk",
+  "sha256": "60143c4ec3eeb1cb9a4e80809156c42823425cbb3e49bf81e37369d60c371c18",
   "forceUpdate": false,
-  "releaseNotes": "手机端自动构建发布版本 0.2.0。APK 已作为 .apk.bin 邮件附件发送。"
+  "releaseNotes": "手机端自动构建发布版本 0.2.0。"
 }

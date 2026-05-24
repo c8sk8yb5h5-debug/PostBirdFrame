@@ -33,20 +33,20 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Restore mobile release keystore
+      - name: Restore shared PostBird release keystore
         working-directory: mobile-app
         shell: bash
         run: |
-          if [ -z "${{ secrets.MOBILE_RELEASE_KEYSTORE_BASE64 }}" ]; then
-            echo "MOBILE_RELEASE_KEYSTORE_BASE64 is missing"
+          if [ -z "${{ secrets.POSTBIRD_KEYSTORE_BASE64 }}" ]; then
+            echo "POSTBIRD_KEYSTORE_BASE64 is missing"
             exit 1
           fi
-          echo "${{ secrets.MOBILE_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+          echo "${{ secrets.POSTBIRD_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
           cat > release-signing.properties <<EOF
           storeFile=release-keystore.jks
-          storePassword=${{ secrets.MOBILE_RELEASE_STORE_PASSWORD }}
-          keyAlias=${{ secrets.MOBILE_RELEASE_KEY_ALIAS }}
-          keyPassword=${{ secrets.MOBILE_RELEASE_KEY_PASSWORD }}
+          storePassword=${{ secrets.POSTBIRD_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.POSTBIRD_KEY_ALIAS }}
+          keyPassword=${{ secrets.POSTBIRD_KEY_PASSWORD }}
           EOF
 
       - name: Build signed mobile release APK
@@ -71,7 +71,7 @@ jobs:
             "type": "POSTBIRD_UPDATE",
             "target": "mobile",
             "delivery": "qq_email_attachment_bin",
-            "signing": "release_keystore",
+            "signing": "postbird_shared_keystore",
             "versionName": "${VERSION_NAME}",
             "versionCode": ${VERSION_CODE},
             "attachmentName": "${BIN_NAME}",
@@ -85,7 +85,7 @@ jobs:
           POSTBIRD_UPDATE
           target=mobile
           delivery=qq_email_attachment_bin
-          signing=release_keystore
+          signing=postbird_shared_keystore
           versionName=${VERSION_NAME}
           versionCode=${VERSION_CODE}
           attachmentName=${BIN_NAME}
@@ -145,7 +145,7 @@ jobs:
             POSTBIRD_UPDATE
             target=mobile
             delivery=qq_email_attachment_bin
-            signing=release_keystore
+            signing=postbird_shared_keystore
             versionName=${{ steps.release_info.outputs.version_name }}
             versionCode=${{ steps.release_info.outputs.version_code }}
             attachmentName=${{ steps.release_info.outputs.bin_name }}

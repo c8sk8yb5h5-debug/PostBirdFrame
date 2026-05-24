@@ -2,33 +2,53 @@
 
 ## 目标
 
-参照 MatePad 端相框项目做法，手机端新版本通过 QQ 邮箱通知设备端。
+参照 MatePad 端相框项目做法，手机端新版本通过 QQ 邮箱投递到设备端。
 
-GitHub 负责自动生成 APK 和发布 Release。
+GitHub 负责自动生成 APK。
 
-QQ 邮箱负责把新版本信息发送给绑定邮箱。
+QQ 邮箱负责发送更新邮件，并把 APK 作为附件发送。
 
-手机端 APP 后续通过读取邮箱中的 `[POSTBIRD_UPDATE]` 邮件，获得新版本号、APK 下载地址和 SHA-256 校验值，再下载并引导安装。
+由于手机端不能使用 VPN，不能依赖 GitHub 下载地址，所以手机端更新不再要求访问 GitHub Release。GitHub Release 只作为开发侧备份。
 
-## 为什么不把 APK 直接作为 QQ 邮件附件
+## 核心规则
 
-不建议直接把 APK 作为 QQ 邮件附件发送。
-
-原因：
-
-1. APK 文件可能超过普通附件限制；
-2. 邮件附件下载和解析更容易受邮箱策略影响；
-3. 直接发送 APK 容易被邮箱安全策略拦截；
-4. GitHub Release 更适合作为 APK 文件分发源；
-5. QQ 邮箱更适合作为“更新通知通道”。
-
-因此采用：
+手机端更新采用：
 
 ```text
-GitHub Release 存放 APK
-QQ 邮箱发送更新通知
-APP 读取邮件后下载 APK
+GitHub Actions 构建 APK
+↓
+把 APK 复制为 .apk.bin 文件
+↓
+通过 QQ 邮箱发送 [POSTBIRD_UPDATE] 更新邮件
+↓
+邮件附件携带 .apk.bin
+↓
+手机端读取更新邮件附件
+↓
+保存到本地时改回 .apk
+↓
+校验 SHA-256
+↓
+调起系统安装界面
 ```
+
+## 为什么 APK 附件要加 .bin 后缀
+
+直接发送 `.apk` 附件可能被邮箱或系统安全策略拦截。
+
+所以工作流把：
+
+```text
+postbird-mobile-v0.2.0.apk
+```
+
+复制为：
+
+```text
+postbird-mobile-v0.2.0.apk.bin
+```
+
+邮件发送 `.apk.bin` 附件。手机端接收后，再在本地保存为 `.apk` 并调起安装。
 
 ## GitHub Actions 工作流
 
@@ -47,11 +67,13 @@ Publish Mobile Update Email
 该工作流会自动执行：
 
 1. 构建手机端 APK；
-2. 创建或更新 GitHub Release；
-3. 上传 APK 到 Release；
+2. 复制 APK 为 `.apk.bin`；
+3. 计算 APK 的 SHA-256；
 4. 生成 `releases/mobile/latest.json`；
-5. 发送 QQ 邮箱更新邮件；
-6. 上传构建产物用于调试。
+5. 通过 QQ SMTP 发送更新邮件；
+6. 把 `.apk.bin` 作为邮件附件；
+7. 同时把 APK 上传到 GitHub Release 作为开发侧备份；
+8. 上传构建产物用于调试。
 
 ## 更新邮件格式
 
@@ -66,12 +88,20 @@ Publish Mobile Update Email
 ```text
 POSTBIRD_UPDATE
 target=mobile
+delivery=qq_email_attachment_bin
 versionName=0.2.0
 versionCode=2
-apkUrl=https://github.com/xxx/releases/download/mobile-v0.2.0/postbird-mobile-v0.2.0.apk
+attachmentName=postbird-mobile-v0.2.0.apk.bin
+originalApkName=postbird-mobile-v0.2.0.apk
 sha256=APK_SHA256
 forceUpdate=false
-releaseNotes=手机端自动构建发布版本 0.2.0。
+releaseNotes=手机端自动构建发布版本 0.2.0。APK 已作为 .apk.bin 邮件附件发送。
+```
+
+邮件附件：
+
+```text
+postbird-mobile-v0.2.0.apk.bin
 ```
 
 ## 需要配置的 GitHub Secrets
@@ -101,14 +131,18 @@ POSTBIRD_UPDATE_RECEIVER_EMAIL：接收更新邮件的邮箱，通常与 QQ_SMTP
 1. 通过 IMAP 登录绑定 QQ 邮箱；
 2. 检索标题包含 `[POSTBIRD_UPDATE]` 的邮件；
 3. 只处理 `target=mobile` 的更新邮件；
-4. 对比本机 `versionCode`；
-5. 若邮件中的 `versionCode` 更高，则读取 `apkUrl` 下载 APK；
-6. 下载完成后校验 `sha256`；
-7. 校验通过后调起系统安装界面；
-8. 同一版本更新邮件只处理一次。
+4. 只处理 `delivery=qq_email_attachment_bin` 的更新方式；
+5. 对比本机 `versionCode`；
+6. 若邮件中的 `versionCode` 更高，则下载邮件附件 `.apk.bin`；
+7. 保存到本地时重命名为 `.apk`；
+8. 校验邮件正文中的 `sha256`；
+9. 校验通过后调起系统安装界面；
+10. 同一版本更新邮件只处理一次。
 
 ## 当前策略
 
-QQ 邮箱只作为更新通知通道，不作为 APK 文件存储通道。
+手机端不需要访问 GitHub 下载 APK。
 
-APK 文件仍由 GitHub Release 托管。
+GitHub 只负责构建和备份。
+
+QQ 邮箱负责投递更新邮件和 `.apk.bin` 更新附件。

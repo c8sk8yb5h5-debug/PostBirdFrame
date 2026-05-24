@@ -22,6 +22,11 @@
         </provider>
 
         <activity
+            android:name=".mail.ReceiveMediaActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
+        <activity
             android:name=".update.UpdateActivity"
             android:exported="false"
             android:screenOrientation="landscape" />

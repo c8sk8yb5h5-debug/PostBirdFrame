@@ -2,7 +2,7 @@
   "versionName": "0.3.0",
   "versionCode": 3,
   "apkUrl": "https://github.com/c8sk8yb5h5-debug/PostBirdFrame/releases/download/mobile-v0.3.0/postbird-mobile-v0.3.0.apk",
-  "sha256": "d8980081b8b96e9a491df078c4ca192489d664fed8eb402ed52dd9ae50832fb7",
+  "sha256": "71e9f7166bb70f1d39c5daeeffd4df99c053917aa065d2ead4c6030918953e17",
   "forceUpdate": false,
   "releaseNotes": "手机端自动构建发布版本 0.3.0。"
 }

@@ -78,6 +78,7 @@ jobs:
           fi
 
       - name: Commit latest.json
+        continue-on-error: true
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -87,7 +88,8 @@ jobs:
             echo "latest.json unchanged"
           else
             git commit -m "Update mobile latest release manifest"
-            git push
+            git pull --rebase origin main || true
+            git push || echo "latest.json push skipped; artifact upload will continue"
           fi
 
       - name: Upload APK artifact

@@ -97,6 +97,7 @@ jobs:
           fi
 
       - name: Commit latest.json
+        continue-on-error: true
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -106,7 +107,8 @@ jobs:
             echo "latest.json unchanged"
           else
             git commit -m "Update mobile email attachment update manifest"
-            git push
+            git pull --rebase origin main || true
+            git push || echo "latest.json push skipped; email delivery will continue"
           fi
 
       - name: Send QQ update email with APK bin attachment

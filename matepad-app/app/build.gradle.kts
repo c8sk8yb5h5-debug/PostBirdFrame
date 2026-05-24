@@ -12,8 +12,8 @@ android {
         applicationId = "com.postbird.frame"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.3.6"
+        versionCode = 11
+        versionName = "1.3.7"
     }
 
     buildFeatures {
@@ -50,6 +50,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

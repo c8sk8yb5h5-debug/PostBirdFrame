@@ -1,13 +1,8 @@
 {
-  "platform": "phone",
-  "applicationId": "com.postbird.mobile",
-  "delivery": "qq_email_attachment_bin",
-  "signing": "release",
   "versionName": "0.3.0",
   "versionCode": 3,
-  "attachmentName": "PostBird-Phone-v0.3.0-code3.apk.bin",
-  "originalApkName": "PostBird-Phone-v0.3.0-code3.apk",
-  "sha256": "930f3139b48a87302071688cf678f3997939cf4ad7997f4bcc2c9d128dde642c",
+  "apkUrl": "https://github.com/c8sk8yb5h5-debug/PostBirdFrame/releases/download/mobile-v0.3.0/postbird-mobile-v0.3.0.apk",
+  "sha256": "d8980081b8b96e9a491df078c4ca192489d664fed8eb402ed52dd9ae50832fb7",
   "forceUpdate": false,
-  "releaseNotes": "手机端固定 release 签名更新包 0.3.0，APK 已作为 .apk.bin 邮件附件发送。"
+  "releaseNotes": "手机端自动构建发布版本 0.3.0。"
 }

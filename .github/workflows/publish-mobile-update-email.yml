@@ -59,40 +59,40 @@ jobs:
         run: |
           VERSION_NAME=$(grep -oP 'versionName = "\K[^"]+' mobile-app/app/build.gradle.kts)
           VERSION_CODE=$(grep -oP 'versionCode = \K[0-9]+' mobile-app/app/build.gradle.kts)
-          TAG="mobile-v${VERSION_NAME}"
-          APK_NAME="postbird-mobile-v${VERSION_NAME}.apk"
-          BIN_NAME="postbird-mobile-v${VERSION_NAME}.apk.bin"
+          TAG="phone-v${VERSION_NAME}-code${VERSION_CODE}"
+          APK_NAME="PostBird-Phone-v${VERSION_NAME}-code${VERSION_CODE}.apk"
+          BIN_NAME="PostBird-Phone-v${VERSION_NAME}-code${VERSION_CODE}.apk.bin"
           mkdir -p release-output releases/mobile
           cp mobile-app/app/build/outputs/apk/release/app-release.apk "release-output/${APK_NAME}"
           cp mobile-app/app/build/outputs/apk/release/app-release.apk "release-output/${BIN_NAME}"
           SHA256=$(sha256sum "release-output/${APK_NAME}" | awk '{print $1}')
           cat > releases/mobile/latest.json <<EOF
           {
-            "type": "POSTBIRD_UPDATE",
-            "target": "mobile",
+            "platform": "phone",
+            "applicationId": "com.postbird.mobile",
             "delivery": "qq_email_attachment_bin",
-            "signing": "postbird_shared_keystore",
+            "signing": "release",
             "versionName": "${VERSION_NAME}",
             "versionCode": ${VERSION_CODE},
             "attachmentName": "${BIN_NAME}",
             "originalApkName": "${APK_NAME}",
             "sha256": "${SHA256}",
             "forceUpdate": false,
-            "releaseNotes": "手机端固定签名 release 更新包 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。"
+            "releaseNotes": "手机端固定 release 签名更新包 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。"
           }
           EOF
-          cat > release-output/postbird-mobile-update-email.txt <<EOF
-          POSTBIRD_UPDATE
-          target=mobile
+          cat > release-output/postbird-phone-update-email.txt <<EOF
+          platform=phone
+          applicationId=com.postbird.mobile
           delivery=qq_email_attachment_bin
-          signing=postbird_shared_keystore
+          signing=release
           versionName=${VERSION_NAME}
           versionCode=${VERSION_CODE}
           attachmentName=${BIN_NAME}
           originalApkName=${APK_NAME}
           sha256=${SHA256}
           forceUpdate=false
-          releaseNotes=手机端固定签名 release 更新包 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。
+          releaseNotes=手机端固定 release 签名更新包 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。
           EOF
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
@@ -111,7 +111,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK_PATH" --clobber
           else
-            gh release create "$TAG" "$APK_PATH" --title "PostBird Mobile ${{ steps.release_info.outputs.version_name }}" --notes "手机端固定签名 release 版本 ${{ steps.release_info.outputs.version_name }}。邮箱更新以 .apk.bin 附件为准，GitHub Release 仅作为备份。"
+            gh release create "$TAG" "$APK_PATH" --title "PostBird Phone ${{ steps.release_info.outputs.version_name }}" --notes "手机端固定签名 release 版本 ${{ steps.release_info.outputs.version_name }}。邮箱更新以 .apk.bin 附件为准，GitHub Release 仅作为备份。"
           fi
 
       - name: Commit latest.json
@@ -124,7 +124,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "latest.json unchanged"
           else
-            git commit -m "Update mobile signed email attachment manifest"
+            git commit -m "Update phone signed email attachment manifest"
             git pull --rebase origin main || true
             git push || echo "latest.json push skipped; email delivery will continue"
           fi
@@ -137,25 +137,25 @@ jobs:
           secure: true
           username: ${{ secrets.QQ_MAIL_USERNAME }}
           password: ${{ secrets.QQ_MAIL_AUTH_CODE }}
-          subject: "[POSTBIRD_UPDATE] mobile ${{ steps.release_info.outputs.version_name }}"
+          subject: "PostBirdFrame Phone Update v${{ steps.release_info.outputs.version_name }} code=${{ steps.release_info.outputs.version_code }}"
           to: ${{ secrets.QQ_MAIL_TO }}
           from: ${{ secrets.QQ_MAIL_USERNAME }}
           attachments: release-output/${{ steps.release_info.outputs.bin_name }}
           body: |
-            POSTBIRD_UPDATE
-            target=mobile
+            platform=phone
+            applicationId=com.postbird.mobile
             delivery=qq_email_attachment_bin
-            signing=postbird_shared_keystore
+            signing=release
             versionName=${{ steps.release_info.outputs.version_name }}
             versionCode=${{ steps.release_info.outputs.version_code }}
             attachmentName=${{ steps.release_info.outputs.bin_name }}
             originalApkName=${{ steps.release_info.outputs.apk_name }}
             sha256=${{ steps.release_info.outputs.sha256 }}
             forceUpdate=false
-            releaseNotes=手机端固定签名 release 更新包 ${{ steps.release_info.outputs.version_name }}，APK 已作为 .apk.bin 邮件附件发送。
+            releaseNotes=手机端固定 release 签名更新包 ${{ steps.release_info.outputs.version_name }}，APK 已作为 .apk.bin 邮件附件发送。
 
       - name: Upload signed update artifact
         uses: actions/upload-artifact@v4
         with:
-          name: postbird-mobile-signed-update-package
+          name: postbird-phone-signed-update-package
           path: release-output/

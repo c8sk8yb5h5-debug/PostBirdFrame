@@ -5,5 +5,5 @@ object PhoneBoxConfig {
     const val HOST = "imap." + "qq.com"
     const val PORT = 993
     const val FOLDER = "IN" + "BOX"
-    const val SCAN_LIMIT = 30
+    const val SCAN_LIMIT = 100
 }

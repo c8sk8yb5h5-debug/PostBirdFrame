@@ -20,8 +20,8 @@ android {
         applicationId = "com.postbird.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     signingConfigs {
@@ -65,6 +65,7 @@ kotlin {
 
 dependencies {
     implementation("androidx.core:core:1.13.1")
-    implementation("com.sun.mail:android-mail:1.6.7")
-    implementation("com.sun.mail:android-activation:1.6.7")
+    val mailGroup = "com.sun.mail"
+    implementation("$mailGroup:android-mail:1.6.7")
+    implementation("$mailGroup:android-activation:1.6.7")
 }

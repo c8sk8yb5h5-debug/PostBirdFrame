@@ -87,7 +87,11 @@ private fun UpdateScreen() {
                     } else {
                         status = "更新包已准备好，正在打开安装界面。"
                         Toast.makeText(context, status, Toast.LENGTH_LONG).show()
-                        installer.installApk(context, result.apkFile)
+                        val installResult = installer.installApk(context, result.apkFile)
+                        if (!installResult.success) {
+                            status = installResult.message
+                            Toast.makeText(context, installResult.message, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             }

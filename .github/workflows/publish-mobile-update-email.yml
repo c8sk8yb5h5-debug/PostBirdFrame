@@ -1,0 +1,132 @@
+name: Publish Mobile Update Email
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile-app/**"
+      - ".github/workflows/publish-mobile-update-email.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish-mobile-update-email:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build mobile APK
+        working-directory: mobile-app
+        run: gradle clean assembleDebug
+
+      - name: Prepare mobile update package
+        id: release_info
+        shell: bash
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName = "\K[^"]+' mobile-app/app/build.gradle.kts)
+          VERSION_CODE=$(grep -oP 'versionCode = \K[0-9]+' mobile-app/app/build.gradle.kts)
+          TAG="mobile-v${VERSION_NAME}"
+          APK_NAME="postbird-mobile-v${VERSION_NAME}.apk"
+          mkdir -p release-output releases/mobile
+          cp mobile-app/app/build/outputs/apk/debug/app-debug.apk "release-output/${APK_NAME}"
+          SHA256=$(sha256sum "release-output/${APK_NAME}" | awk '{print $1}')
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${APK_NAME}"
+          cat > releases/mobile/latest.json <<EOF
+          {
+            "type": "POSTBIRD_UPDATE",
+            "target": "mobile",
+            "versionName": "${VERSION_NAME}",
+            "versionCode": ${VERSION_CODE},
+            "apkUrl": "${APK_URL}",
+            "sha256": "${SHA256}",
+            "forceUpdate": false,
+            "releaseNotes": "手机端自动构建发布版本 ${VERSION_NAME}。"
+          }
+          EOF
+          cat > release-output/postbird-mobile-update-email.txt <<EOF
+          POSTBIRD_UPDATE
+          target=mobile
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          apkUrl=${APK_URL}
+          sha256=${SHA256}
+          forceUpdate=false
+          releaseNotes=手机端自动构建发布版本 ${VERSION_NAME}。
+          EOF
+          echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version_code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "apk_url=${APK_URL}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${{ steps.release_info.outputs.tag }}"
+          APK_PATH="release-output/${{ steps.release_info.outputs.apk_name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK_PATH" --clobber
+          else
+            gh release create "$TAG" "$APK_PATH" --title "PostBird Mobile ${{ steps.release_info.outputs.version_name }}" --notes "手机端自动发布版本 ${{ steps.release_info.outputs.version_name }}。"
+          fi
+
+      - name: Commit latest.json
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases/mobile/latest.json
+          if git diff --cached --quiet; then
+            echo "latest.json unchanged"
+          else
+            git commit -m "Update mobile email update manifest"
+            git push
+          fi
+
+      - name: Send QQ update email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.QQ_SMTP_USERNAME }}
+          password: ${{ secrets.QQ_SMTP_AUTH_CODE }}
+          subject: "[POSTBIRD_UPDATE] mobile ${{ steps.release_info.outputs.version_name }}"
+          to: ${{ secrets.POSTBIRD_UPDATE_RECEIVER_EMAIL }}
+          from: ${{ secrets.QQ_SMTP_USERNAME }}
+          body: |
+            POSTBIRD_UPDATE
+            target=mobile
+            versionName=${{ steps.release_info.outputs.version_name }}
+            versionCode=${{ steps.release_info.outputs.version_code }}
+            apkUrl=${{ steps.release_info.outputs.apk_url }}
+            sha256=${{ steps.release_info.outputs.sha256 }}
+            forceUpdate=false
+            releaseNotes=手机端自动构建发布版本 ${{ steps.release_info.outputs.version_name }}。
+
+      - name: Upload update artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postbird-mobile-update-package
+          path: release-output/

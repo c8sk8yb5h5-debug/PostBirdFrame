@@ -115,11 +115,11 @@ jobs:
           server_address: smtp.qq.com
           server_port: 465
           secure: true
-          username: ${{ secrets.QQ_SMTP_USERNAME }}
-          password: ${{ secrets.QQ_SMTP_AUTH_CODE }}
+          username: ${{ secrets.QQ_MAIL_USERNAME }}
+          password: ${{ secrets.QQ_MAIL_AUTH_CODE }}
           subject: "[POSTBIRD_UPDATE] mobile ${{ steps.release_info.outputs.version_name }}"
-          to: ${{ secrets.POSTBIRD_UPDATE_RECEIVER_EMAIL }}
-          from: ${{ secrets.QQ_SMTP_USERNAME }}
+          to: ${{ secrets.QQ_MAIL_TO }}
+          from: ${{ secrets.QQ_MAIL_USERNAME }}
           attachments: release-output/${{ steps.release_info.outputs.bin_name }}
           body: |
             POSTBIRD_UPDATE

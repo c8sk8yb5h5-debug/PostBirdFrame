@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val matepadVersionCode = (project.findProperty("matepadVersionCode") as String?)?.toIntOrNull() ?: 19
+val matepadVersionName = (project.findProperty("matepadVersionName") as String?) ?: "1.3.15"
+
 android {
     namespace = "com.postbird.frame.matepad"
     compileSdk = 35
@@ -12,8 +15,8 @@ android {
         applicationId = "com.postbird.frame"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.3.15"
+        versionCode = matepadVersionCode
+        versionName = matepadVersionName
     }
 
     buildFeatures {

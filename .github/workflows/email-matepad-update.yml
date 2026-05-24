@@ -22,20 +22,25 @@ jobs:
         with:
           gradle-version: 8.10.2
       - run: gradle -p matepad-app assembleRelease
-      - id: sign_app
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: matepad-app/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets[format('POSTBIRD_{0}_BASE64', 'KEYSTORE')] }}
-          alias: ${{ secrets.POSTBIRD_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets[format('POSTBIRD_{0}_PASSWORD', 'KEYSTORE')] }}
-          keyPassword: ${{ secrets.POSTBIRD_KEY_PASSWORD }}
+      - name: Sign release APK
+        env:
+          KS_DATA: ${{ secrets.POSTBIRD_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.POSTBIRD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.POSTBIRD_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.POSTBIRD_KEY_PASSWORD }}
+        run: |
+          echo "$KS_DATA" | base64 -d > postbird-release.jks
+          UNSIGNED=$(ls matepad-app/app/build/outputs/apk/release/*unsigned*.apk | head -n 1)
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          "$BUILD_TOOLS/zipalign" -p -f 4 "$UNSIGNED" PostBird-MatePad-aligned.apk
+          "$BUILD_TOOLS/apksigner" sign --ks postbird-release.jks --ks-pass pass:$KS_PASS --ks-key-alias $KEY_ALIAS --key-pass pass:$KEY_PASS --out PostBird-MatePad-signed.apk PostBird-MatePad-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose PostBird-MatePad-signed.apk
       - name: Prepare mail attachment
         run: |
           mkdir -p update-mail
           VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' matepad-app/app/build.gradle.kts | head -n 1)
           VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' matepad-app/app/build.gradle.kts | head -n 1)
-          cp "${{ steps.sign_app.outputs.signedReleaseFile }}" "update-mail/PostBird-MatePad-v${VERSION_NAME}-code${VERSION_CODE}.apk.bin"
+          cp PostBird-MatePad-signed.apk "update-mail/PostBird-MatePad-v${VERSION_NAME}-code${VERSION_CODE}.apk.bin"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "ATTACHMENT_PATH=update-mail/PostBird-MatePad-v${VERSION_NAME}-code${VERSION_CODE}.apk.bin" >> "$GITHUB_ENV"

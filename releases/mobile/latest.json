@@ -2,11 +2,11 @@
   "type": "POSTBIRD_UPDATE",
   "target": "mobile",
   "delivery": "qq_email_attachment_bin",
-  "versionName": "0.2.0",
-  "versionCode": 2,
-  "attachmentName": "postbird-mobile-v0.2.0.apk.bin",
-  "originalApkName": "postbird-mobile-v0.2.0.apk",
-  "sha256": "4b31d63e7f4624859d946e109aff609830ed90fbfcaa44766b0477826eadd1f2",
+  "versionName": "0.3.0",
+  "versionCode": 3,
+  "attachmentName": "postbird-mobile-v0.3.0.apk.bin",
+  "originalApkName": "postbird-mobile-v0.3.0.apk",
+  "sha256": "2884276678fed4874560ec8bf4f54a8c696274b614f33973629c0834ceab9008",
   "forceUpdate": false,
-  "releaseNotes": "手机端自动构建发布版本 0.2.0。APK 已作为 .apk.bin 邮件附件发送。"
+  "releaseNotes": "手机端自动构建发布版本 0.3.0。APK 已作为 .apk.bin 邮件附件发送。"
 }

@@ -20,7 +20,7 @@ class MailUpdatePackageDownloader {
         email: String,
         authCode: String,
         currentVersionCode: Int,
-        maxMessages: Int = 6
+        maxMessages: Int = 20
     ): MailUpdateInfo {
         val normalizedEmail = email.trim()
         if (normalizedEmail.isBlank() || authCode.isBlank()) {
@@ -75,7 +75,7 @@ class MailUpdatePackageDownloader {
                 val apkFile = MailUpdatePackageInstaller().prepareApk(context, file)
                 return MailUpdateInfo(
                     success = true,
-                    message = "发现邮箱更新包：v$versionName code=$versionCode",
+                    message = "发现 MatePad 邮箱更新包：v$versionName code=$versionCode",
                     versionName = versionName,
                     versionCode = versionCode,
                     attachmentName = file.name,
@@ -83,7 +83,7 @@ class MailUpdatePackageDownloader {
                 )
             }
 
-            MailUpdateInfo(false, "未发现可用邮箱更新包")
+            MailUpdateInfo(false, "未发现 MatePad 端可用更新包")
         } catch (error: AuthenticationFailedException) {
             MailUpdateInfo(false, "邮箱授权码错误或 IMAP 未开启")
         } catch (error: SocketTimeoutException) {
@@ -154,10 +154,11 @@ class MailUpdatePackageDownloader {
     }
 
     private fun isUpdateAttachment(fileName: String): Boolean {
-        return fileName.endsWith(".apk", ignoreCase = true) ||
+        val supportedSuffix = fileName.endsWith(".apk", ignoreCase = true) ||
             fileName.endsWith(".apk.zip", ignoreCase = true) ||
             fileName.endsWith(".apk.bin", ignoreCase = true) ||
             fileName.endsWith(".zip", ignoreCase = true)
+        return fileName.contains(ATTACHMENT_NAME_KEY, ignoreCase = true) && supportedSuffix
     }
 
     companion object {
@@ -167,6 +168,7 @@ class MailUpdatePackageDownloader {
         private const val READ_TIMEOUT_MS = 180000
         private const val FETCH_SIZE_BYTES = 1048576
         private const val COPY_BUFFER_BYTES = 65536
-        private const val UPDATE_SUBJECT_KEY = "PostBirdFrame Update"
+        private const val UPDATE_SUBJECT_KEY = "PostBirdFrame MatePad Update"
+        private const val ATTACHMENT_NAME_KEY = "PostBird-MatePad"
     }
 }

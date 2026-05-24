@@ -1,8 +1,13 @@
 {
-  "versionName": "0.4.0",
-  "versionCode": 4,
-  "apkUrl": "https://github.com/c8sk8yb5h5-debug/PostBirdFrame/releases/download/mobile-v0.4.0/postbird-mobile-v0.4.0.apk",
-  "sha256": "4eff35cea6d31017e8fd00eb26be82dae3ee490ef3c1bf8499509fd983393fb0",
+  "platform": "phone",
+  "applicationId": "com.postbird.mobile",
+  "delivery": "qq_email_attachment_bin",
+  "signing": "release",
+  "versionName": "0.4.1",
+  "versionCode": 5,
+  "attachmentName": "PostBird-Phone-v0.4.1-code5.apk.bin",
+  "originalApkName": "PostBird-Phone-v0.4.1-code5.apk",
+  "sha256": "312e00508dc0649eaee93d44c47c44527e1a87c29f359c8d1811d875f823a100",
   "forceUpdate": false,
-  "releaseNotes": "手机端自动构建发布版本 0.4.0。"
+  "releaseNotes": "手机端 IMAP 连接修复版本 0.4.1，APK 已作为 .apk.bin 邮件附件发送。"
 }

@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val matepadVersionCode = (project.findProperty("matepadVersionCode") as String?)?.toIntOrNull() ?: 14
+val matepadVersionName = (project.findProperty("matepadVersionName") as String?) ?: "1.3.10"
+
 android {
     namespace = "com.postbird.frame.matepad"
     compileSdk = 35
@@ -12,8 +15,8 @@ android {
         applicationId = "com.postbird.frame"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.3.10"
+        versionCode = matepadVersionCode
+        versionName = matepadVersionName
     }
 
     buildFeatures {
@@ -50,7 +53,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
-
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

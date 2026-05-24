@@ -66,8 +66,8 @@ jobs:
           message = EmailMessage()
           message["From"] = username
           message["To"] = recipient
-          message["Subject"] = f"PostBirdFrame Update v{version_name} code={version_code}"
-          message.set_content("\n".join([f"versionName={version_name}", f"versionCode={version_code}", f"package={attachment_path.name}", "signing=release"] ))
+          message["Subject"] = f"PostBirdFrame MatePad Update v{version_name} code={version_code}"
+          message.set_content("\n".join([f"platform=matepad", f"versionName={version_name}", f"versionCode={version_code}", f"package={attachment_path.name}", "signing=release"] ))
           message.add_attachment(attachment_path.read_bytes(), maintype="application", subtype="octet-stream", filename=attachment_path.name)
           for port, use_ssl in [(465, True), (587, False)]:
               try:

@@ -1,0 +1,2 @@
+Trigger MatePad V3 settings proportion build.
+UI target: settings panel proportions follow MatePadPreviewPrototype screenshot.

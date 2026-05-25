@@ -67,7 +67,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.postbird.frame.matepad.mail.QqMailConnectionTester
@@ -161,34 +160,15 @@ private fun FrameMainContent(modifier: Modifier, settingsVisible: Boolean) {
             Text("MatePad 横屏播放端 · QQ 邮箱接收与更新版", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF637568))
         }
 
-        Card(
-            modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.72f).aspectRatio(16f / 10f),
-            shape = RoundedCornerShape(34.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (settingsVisible) 2.dp else 10.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF2))
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().border(1.dp, Color(0xFFE4D8C4), RoundedCornerShape(34.dp)).padding(36.dp)
-            ) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    PostBirdPlaceholder()
-                    Text("等待照片或视频", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF2E3A32))
-                    Text(
-                        "手机端发送照片或视频邮件后，在设置页点击“立即检查”即可接收附件。",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFF66756A),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
+        ReceivedMediaFrame(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.72f)
+                .aspectRatio(16f / 10f)
+        )
 
         Text(
-            text = "等待手机端发送照片或视频",
+            text = "设置页接收后，返回主界面查看最新照片",
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFF64736A),
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 34.dp)

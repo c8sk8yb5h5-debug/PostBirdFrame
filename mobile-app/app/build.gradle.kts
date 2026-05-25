@@ -12,6 +12,9 @@ val releaseSigningProperties = Properties().apply {
     }
 }
 
+val phoneVersionCode = (project.findProperty("phoneVersionCode") as String?)?.toIntOrNull() ?: 4
+val phoneVersionName = (project.findProperty("phoneVersionName") as String?) ?: "0.4.0"
+
 android {
     namespace = "com.postbird.mobile"
     compileSdk = 35
@@ -20,8 +23,8 @@ android {
         applicationId = "com.postbird.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = phoneVersionCode
+        versionName = phoneVersionName
     }
 
     signingConfigs {

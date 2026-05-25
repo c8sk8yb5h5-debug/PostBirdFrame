@@ -1,0 +1,2 @@
+Trigger MatePad UI update build after preview UI corrections.
+Expected minimum target: versionName 1.4.48 / versionCode 48.

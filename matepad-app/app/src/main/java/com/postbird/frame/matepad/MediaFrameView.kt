@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,7 +41,10 @@ import java.io.File
 import kotlinx.coroutines.delay
 
 @Composable
-fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
+fun ReceivedMediaFrame(
+    modifier: Modifier = Modifier,
+    showCounter: Boolean = false
+) {
     val context = LocalContext.current
     var refreshTick by remember { mutableIntStateOf(0) }
     var playIndex by remember { mutableIntStateOf(0) }
@@ -85,8 +86,7 @@ fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
 
     Box(
         modifier = modifier
-            .background(Color(0xFFFFFBF2), RoundedCornerShape(34.dp))
-            .border(1.dp, Color(0xFFE4D8C4), RoundedCornerShape(34.dp))
+            .background(Color.Black)
             .pointerInput(mediaFiles.size) {
                 detectHorizontalDragGestures(
                     onDragStart = { dragTotal = 0f },
@@ -104,7 +104,6 @@ fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
                     onDragCancel = { dragTotal = 0f }
                 )
             }
-            .padding(24.dp)
     ) {
         if (currentFile == null) {
             EmptyReceivedMediaHint(Modifier.align(Alignment.Center))
@@ -119,6 +118,7 @@ fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
                     file = currentFile,
                     currentIndex = playIndex + 1,
                     totalCount = mediaFiles.size,
+                    showCounter = showCounter,
                     onVideoFinished = { moveToNext() },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -132,6 +132,7 @@ private fun PlayingReceivedMedia(
     file: File,
     currentIndex: Int,
     totalCount: Int,
+    showCounter: Boolean,
     onVideoFinished: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -142,12 +143,14 @@ private fun PlayingReceivedMedia(
             else -> MediaTextHint("暂不支持此素材：${file.name}")
         }
 
-        Text(
-            text = "$currentIndex / $totalCount",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF64736A).copy(alpha = 0.72f),
-            modifier = Modifier.align(Alignment.BottomEnd)
-        )
+        if (showCounter) {
+            Text(
+                text = "$currentIndex / $totalCount",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.58f),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(18.dp)
+            )
+        }
     }
 }
 
@@ -210,18 +213,18 @@ private fun EmptyReceivedMediaHint(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        PostBirdWaitingIcon()
+        Text("✉", style = MaterialTheme.typography.headlineLarge, color = Color.White.copy(alpha = 0.38f))
         Text(
-            text = "还没有收到照片",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color(0xFF2E3A32)
+            text = "暂无照片 / 视频",
+            style = MaterialTheme.typography.headlineSmall,
+            color = Color.White.copy(alpha = 0.72f)
         )
         Text(
-            text = "打开设置并点击立即检查即可接收照片 / 视频。",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF66756A),
+            text = "打开设置，点击手动收件。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.46f),
             textAlign = TextAlign.Center
         )
     }
@@ -233,20 +236,9 @@ private fun MediaTextHint(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF66756A),
+            color = Color.White.copy(alpha = 0.62f),
             textAlign = TextAlign.Center
         )
-    }
-}
-
-@Composable
-private fun PostBirdWaitingIcon() {
-    Box(
-        modifier = Modifier
-            .background(Color(0xFFF7DFA2), RoundedCornerShape(58.dp))
-            .padding(horizontal = 28.dp, vertical = 20.dp)
-    ) {
-        Text("✉", style = MaterialTheme.typography.headlineLarge, color = Color(0xFFE8B85F))
     }
 }
 

@@ -70,7 +70,7 @@ class MainActivity : Activity() {
         }
 
         statusText = TextView(this).apply {
-            text = "当前版本：${PhoneUpdateRules.CURRENT_VERSION_NAME}"
+            text = "当前版本：${PhoneAppVersion.name(this@MainActivity)} code=${PhoneAppVersion.code(this@MainActivity)}"
             textSize = 14f
             gravity = Gravity.CENTER
             setPadding(0, 24, 0, 0)
@@ -108,7 +108,7 @@ class MainActivity : Activity() {
                 val opened = PhoneBoxSession.open(address, pass)
                 closeStore = opened.first
                 closeFolder = opened.second
-                val apk = PhoneUpdateFinder.find(opened.second, cacheDir)
+                val apk = PhoneUpdateFinder.find(opened.second, cacheDir, PhoneAppVersion.code(this))
                 setStatus("更新包已还原，准备打开系统安装界面")
                 PhoneUpdateInstaller.install(this, apk) {
                     setStatus("请允许本 APP 安装未知应用，然后再次点击检查邮箱更新")

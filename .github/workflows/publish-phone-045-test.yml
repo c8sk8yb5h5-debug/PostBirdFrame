@@ -1,4 +1,4 @@
-name: Publish Phone 0.4.8 Test
+name: Publish Phone 0.4.9 Test
 
 on:
   workflow_dispatch:
@@ -12,11 +12,11 @@ permissions:
   contents: read
 
 jobs:
-  publish-phone-048-test:
+  publish-phone-049-test:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger note
-        run: echo "Auto trigger 0.4.8 after restoring valid workflow."
+        run: echo "Auto trigger 0.4.9 after restoring valid workflow."
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,13 +39,13 @@ jobs:
           from pathlib import Path
           p = Path('app/build.gradle.kts')
           s = p.read_text()
-          s = s.replace('versionCode = 4', 'versionCode = 12')
-          s = s.replace('versionName = "0.4.0"', 'versionName = "0.4.8"')
+          s = s.replace('versionCode = 4', 'versionCode = 13')
+          s = s.replace('versionName = "0.4.0"', 'versionName = "0.4.9"')
           p.write_text(s)
           r = Path('app/src/main/java/com/postbird/mobile/PhoneUpdateRules.kt')
           t = r.read_text()
-          t = t.replace('CURRENT_VERSION_CODE = 4', 'CURRENT_VERSION_CODE = 12')
-          t = t.replace('CURRENT_VERSION_NAME = "0.4.0"', 'CURRENT_VERSION_NAME = "0.4.8"')
+          t = t.replace('CURRENT_VERSION_CODE = 4', 'CURRENT_VERSION_CODE = 13')
+          t = t.replace('CURRENT_VERSION_NAME = "0.4.0"', 'CURRENT_VERSION_NAME = "0.4.9"')
           r.write_text(t)
           PY
 
@@ -68,8 +68,8 @@ jobs:
         id: pkg
         run: |
           mkdir -p release-output
-          APK_NAME="PostBird-Phone-v0.4.8-code12.apk"
-          BIN_NAME="PostBird-Phone-v0.4.8-code12.apk.bin"
+          APK_NAME="PostBird-Phone-v0.4.9-code13.apk"
+          BIN_NAME="PostBird-Phone-v0.4.9-code13.apk.bin"
           cp mobile-app/app/build/outputs/apk/release/app-release.apk "release-output/$APK_NAME"
           cp mobile-app/app/build/outputs/apk/release/app-release.apk "release-output/$BIN_NAME"
           SHA256=$(sha256sum "release-output/$APK_NAME" | awk '{print $1}')
@@ -85,7 +85,7 @@ jobs:
           secure: true
           username: ${{ secrets.QQ_MAIL_USERNAME }}
           password: ${{ secrets.QQ_MAIL_AUTH_CODE }}
-          subject: "PostBirdFrame Phone Update v0.4.8 code=12"
+          subject: "PostBirdFrame Phone Update v0.4.9 code=13"
           to: ${{ secrets.QQ_MAIL_TO }}
           from: ${{ secrets.QQ_MAIL_USERNAME }}
           attachments: release-output/${{ steps.pkg.outputs.bin }}
@@ -94,16 +94,16 @@ jobs:
             applicationId=com.postbird.mobile
             delivery=qq_email_attachment_bin
             signing=release
-            versionName=0.4.8
-            versionCode=12
+            versionName=0.4.9
+            versioncode=13
             attachmentName=${{ steps.pkg.outputs.bin }}
             originalApkName=${{ steps.pkg.outputs.apk }}
             sha256=${{ steps.pkg.outputs.sha }}
             forceUpdate=false
-            releaseNotes=PostBird Phone 0.4.8 attachment matching fix.
+            releaseNotes=PostBird Phone 0.4.9 attachment matching fix.
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: postbird-phone-048-test
+          name: postbird-phone-049-test
           path: release-output/

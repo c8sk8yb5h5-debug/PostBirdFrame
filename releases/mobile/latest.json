@@ -2,7 +2,7 @@
   "versionName": "0.4.0",
   "versionCode": 4,
   "apkUrl": "https://github.com/c8sk8yb5h5-debug/PostBirdFrame/releases/download/mobile-v0.4.0/postbird-mobile-v0.4.0.apk",
-  "sha256": "303922843b94ea2486c1a648a4ac58e7ddcaa040ead3b595cf107ab1c40342a8",
+  "sha256": "8c26fb69a7f8aff62db4d0831fa1c7e8e1a4dbff5f38460359b0b3cc8505ebfc",
   "forceUpdate": false,
   "releaseNotes": "手机端自动构建发布版本 0.4.0。"
 }

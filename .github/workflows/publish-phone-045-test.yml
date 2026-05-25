@@ -2,6 +2,11 @@ name: Publish Phone 0.4.8 Test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/publish-phone-045-test.yml"
 
 permissions:
   contents: read
@@ -10,6 +15,9 @@ jobs:
   publish-phone-048-test:
     runs-on: ubuntu-latest
     steps:
+      - name: Trigger note
+        run: echo "Auto trigger 0.4.8 after restoring valid workflow."
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

@@ -31,15 +31,19 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Restore release keystore
+      - name: Restore shared PostBird release keystore
         working-directory: mobile-app
         run: |
-          echo "${{ secrets.MOBILE_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+          if [ -z "${{ secrets.POSTBIRD_KEYSTORE_BASE64 }}" ]; then
+            echo "POSTBIRD_KEYSTORE_BASE64 is missing"
+            exit 1
+          fi
+          printf '%s' "${{ secrets.POSTBIRD_KEYSTORE_BASE64 }}" | tr -d '\r\n' | base64 --decode > release-keystore.jks
           cat > release-signing.properties <<EOF
           storeFile=release-keystore.jks
-          storePassword=${{ secrets.MOBILE_RELEASE_STORE_PASSWORD }}
-          keyAlias=${{ secrets.MOBILE_RELEASE_KEY_ALIAS }}
-          keyPassword=${{ secrets.MOBILE_RELEASE_KEY_PASSWORD }}
+          storePassword=${{ secrets.POSTBIRD_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.POSTBIRD_KEY_ALIAS }}
+          keyPassword=${{ secrets.POSTBIRD_KEY_PASSWORD }}
           EOF
 
       - name: Build release APK

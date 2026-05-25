@@ -28,8 +28,9 @@ object PhoneMailParts {
             val part: BodyPart = content.getBodyPart(i)
             val rawName = part.fileName
             val name = if (rawName.isNullOrBlank()) "" else MimeUtility.decodeText(rawName)
-            if ((Part.ATTACHMENT.equals(part.disposition, true) || name.isNotBlank()) && name == expectedName) {
-                val file = File(dir, name)
+            if ((Part.ATTACHMENT.equals(part.disposition, true) || name.isNotBlank()) && matchesPhoneUpdateAttachment(name, expectedName)) {
+                val saveName = if (name.endsWith(".apk.bin")) name else expectedName
+                val file = File(dir, saveName)
                 part.inputStream.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
                 return file
             }
@@ -40,5 +41,12 @@ object PhoneMailParts {
             }
         }
         return null
+    }
+
+    private fun matchesPhoneUpdateAttachment(name: String, expectedName: String): Boolean {
+        val normalName = name.replace(" ", "")
+        val normalExpected = expectedName.replace(" ", "")
+        if (normalName == normalExpected) return true
+        return normalName.contains("PostBird-Phone") && normalName.endsWith(".apk.bin")
     }
 }

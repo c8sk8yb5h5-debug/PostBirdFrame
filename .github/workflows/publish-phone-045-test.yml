@@ -1,4 +1,4 @@
-name: Publish Phone 0.4.5 Test
+name: Publish Phone 0.4.6 Test
 
 on:
   workflow_dispatch:
@@ -32,8 +32,8 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           for file, pairs in {
-            'app/build.gradle.kts': [('versionCode = 4','versionCode = 9'), ('versionName = "0.4.0"','versionName = "0.4.5"')],
-            'app/src/main/java/com/postbird/mobile/PhoneUpdateRules.kt': [('CURRENT_VERSION_CODE = 4','CURRENT_VERSION_CODE = 9'), ('CURRENT_VERSION_NAME = "0.4.0"','CURRENT_VERSION_NAME = "0.4.5"')]
+            'app/build.gradle.kts': [('versionCode = 4','versionCode = 10'), ('versionName = "0.4.0"','versionName = "0.4.6"')],
+            'app/src/main/java/com/postbird/mobile/PhoneUpdateRules.kt': [('CURRENT_VERSION_CODE = 4','CURRENT_VERSION_CODE = 10'), ('CURRENT_VERSION_NAME = "0.4.0"','CURRENT_VERSION_NAME = "0.4.6"')]
           }.items():
               p = Path(file)
               s = p.read_text()
@@ -61,8 +61,8 @@ jobs:
         id: info
         run: |
           mkdir -p release-output
-          APK_NAME="PostBird-Phone-v0.4.5-code9.apk"
-          BIN_NAME="PostBird-Phone-v0.4.5-code9.apk.bin"
+          APK_NAME="PostBird-Phone-v0.4.6-code10.apk"
+          BIN_NAME="PostBird-Phone-v0.4.6-code10.apk.bin"
           cp mobile-app/app/build/outputs/apk/release/app-release.apk "release-output/$APK_NAME"
           cp mobile-app/app/build/outputs/apk/release/app-release.apk "release-output/$BIN_NAME"
           SHA256=$(sha256sum "release-output/$APK_NAME" | awk '{print $1}')
@@ -78,7 +78,7 @@ jobs:
           secure: true
           username: ${{ secrets.QQ_MAIL_USERNAME }}
           password: ${{ secrets.QQ_MAIL_AUTH_CODE }}
-          subject: "PostBirdFrame Phone Update v0.4.5 code=9"
+          subject: "PostBirdFrame Phone Update v0.4.6 code=10"
           to: ${{ secrets.QQ_MAIL_TO }}
           from: ${{ secrets.QQ_MAIL_USERNAME }}
           attachments: release-output/${{ steps.info.outputs.bin }}
@@ -87,15 +87,15 @@ jobs:
             applicationId=com.postbird.mobile
             delivery=qq_email_attachment_bin
             signing=release
-            versionName=0.4.5
-            versionCode=9
+            versionName=0.4.6
+            versionCode=10
             attachmentName=${{ steps.info.outputs.bin }}
             originalApkName=${{ steps.info.outputs.apk }}
             sha256=${{ steps.info.outputs.sha }}
             forceUpdate=false
-            releaseNotes=手机端邮箱更新诊断版本 0.4.5。
+            releaseNotes=手机端邮箱更新测试版本 0.4.6。
 
       - uses: actions/upload-artifact@v4
         with:
-          name: postbird-phone-045-test
+          name: postbird-phone-046-test
           path: release-output/

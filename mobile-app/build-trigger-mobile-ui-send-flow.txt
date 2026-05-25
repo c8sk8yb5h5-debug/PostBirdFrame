@@ -1,2 +1,3 @@
-Trigger phone APK build after mobile UI and media send flow update.
+Trigger phone APK build after media sender compile fix.
 Scope: PostBird mobile home UI, photo/video picker, QQ mail media sending, phone update workflow.
+Build target: verify MobileMediaSender no longer depends on ByteArrayDataSource.

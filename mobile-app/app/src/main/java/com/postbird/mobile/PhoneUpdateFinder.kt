@@ -15,9 +15,11 @@ object PhoneUpdateFinder {
             if (recentSubjects.size < 5) recentSubjects.add(subject)
             if (!subject.contains(PhoneUpdateRules.SUBJECT_KEY)) continue
             matchedSubjectCount += 1
-            val text = PhoneMailParts.text(message.content)
-            val info = PhoneUpdateParser.parse(text) ?: continue
+
+            val infoFromSubject = PhoneSubjectUpdateParser.parse(subject)
+            val info = infoFromSubject ?: PhoneUpdateParser.parse(PhoneMailParts.text(message.content)) ?: continue
             parsedInfoCount += 1
+
             if (info.versionCode <= PhoneUpdateRules.CURRENT_VERSION_CODE) {
                 throw IllegalStateException("当前已是最新版本：邮件版本 code=${info.versionCode}，本机版本 code=${PhoneUpdateRules.CURRENT_VERSION_CODE}")
             }
@@ -38,6 +40,6 @@ object PhoneUpdateFinder {
         }
 
         val titles = recentSubjects.joinToString(" | ") { it.take(40) }
-        throw IllegalStateException("未发现手机端可用更新包。扫描=${messages.size}，标题命中=${matchedSubjectCount}，正文解析=${parsedInfoCount}。最近标题：${titles}")
+        throw IllegalStateException("未发现手机端可用更新包。扫描=${messages.size}，标题命中=${matchedSubjectCount}，解析=${parsedInfoCount}。最近标题：${titles}")
     }
 }

@@ -1,0 +1,2 @@
+Trigger phone APK build after mobile UI and media send flow update.
+Scope: PostBird mobile home UI, photo/video picker, QQ mail media sending, phone update workflow.

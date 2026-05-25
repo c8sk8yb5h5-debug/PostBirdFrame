@@ -4,9 +4,13 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.VideoView
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -15,7 +19,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,10 +43,13 @@ import com.postbird.frame.matepad.mail.MediaReceiveStore
 import java.io.File
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun ReceivedMediaFrame(
     modifier: Modifier = Modifier,
-    showCounter: Boolean = false
+    showCounter: Boolean = false,
+    isPlaying: Boolean = true,
+    selectedFilePath: String? = null
 ) {
     val context = LocalContext.current
     var refreshTick by remember { mutableIntStateOf(0) }
@@ -73,8 +79,18 @@ fun ReceivedMediaFrame(
         }
     }
 
-    LaunchedEffect(mediaFiles.size, playIndex, manualControlTick) {
-        if (mediaFiles.size > 1) {
+    LaunchedEffect(selectedFilePath) {
+        if (!selectedFilePath.isNullOrBlank()) {
+            val targetIndex = mediaFiles.indexOfFirst { it.absolutePath == selectedFilePath }
+            if (targetIndex >= 0) {
+                playIndex = targetIndex
+                manualControlTick = System.currentTimeMillis()
+            }
+        }
+    }
+
+    LaunchedEffect(mediaFiles.size, playIndex, manualControlTick, isPlaying) {
+        if (isPlaying && mediaFiles.size > 1) {
             val waitTime = if (manualControlTick > 0L) MANUAL_PAUSE_INTERVAL_MS else SLIDE_INTERVAL_MS
             delay(waitTime)
             playIndex = (playIndex + 1) % mediaFiles.size
@@ -110,7 +126,10 @@ fun ReceivedMediaFrame(
         } else {
             AnimatedContent(
                 targetState = currentFile.absolutePath,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = {
+                    (slideInHorizontally(animationSpec = tween(280)) { 24 } + fadeIn(animationSpec = tween(280))) togetherWith
+                        (slideOutHorizontally(animationSpec = tween(280)) { -24 } + fadeOut(animationSpec = tween(280)))
+                },
                 label = "mediaSlide",
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -119,7 +138,7 @@ fun ReceivedMediaFrame(
                     currentIndex = playIndex + 1,
                     totalCount = mediaFiles.size,
                     showCounter = showCounter,
-                    onVideoFinished = { moveToNext() },
+                    onVideoFinished = { if (isPlaying) moveToNext() },
                     modifier = Modifier.fillMaxSize()
                 )
             }

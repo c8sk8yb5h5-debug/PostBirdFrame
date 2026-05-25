@@ -31,7 +31,12 @@ class MainActivity : Activity() {
 
     private fun buildHome() {
         val root = FrameLayout(this)
-        root.addView(PostBirdPngSceneView(this), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val scene = try {
+            PostBirdPngSceneView(this)
+        } catch (t: Throwable) {
+            EmergencySceneView(this, t.message ?: t.javaClass.simpleName)
+        }
+        root.addView(scene, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val gear = Button(this).apply {
             text = "⚙"
@@ -157,4 +162,27 @@ class MainActivity : Activity() {
     private fun setStatus(message: String) { runOnUiThread { statusText.text = message; Toast.makeText(this, message, Toast.LENGTH_SHORT).show() } }
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     companion object { private const val REQUEST_PHOTO = 301; private const val REQUEST_VIDEO = 302 }
+}
+
+private class EmergencySceneView(context: android.content.Context, private val reason: String) : android.view.View(context) {
+    private val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        p.style = android.graphics.Paint.Style.FILL
+        p.color = android.graphics.Color.rgb(137,195,242)
+        canvas.drawRoundRect(android.graphics.RectF(w*.065f,h*.025f,w*.935f,h*.975f),38f,38f,p)
+        p.color = android.graphics.Color.rgb(192,220,128)
+        canvas.drawRect(w*.065f,h*.78f,w*.935f,h*.975f,p)
+        p.color = android.graphics.Color.WHITE
+        canvas.drawRoundRect(android.graphics.RectF(w*.18f,h*.18f,w*.82f,h*.25f),42f,42f,p)
+        p.color = android.graphics.Color.rgb(45,56,70)
+        p.textAlign = android.graphics.Paint.Align.CENTER
+        p.textSize = 30f
+        p.isFakeBoldText = true
+        canvas.drawText("素材加载失败，已进入安全模式", w*.5f, h*.22f, p)
+        p.textSize = 20f
+        p.isFakeBoldText = false
+        canvas.drawText(reason.take(32), w*.5f, h*.30f, p)
+    }
 }

@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PostBirdFrameTheme {
-                MatePadPreviewHomeScreen()
+                MatePadPreviewHomeScreenV2()
             }
         }
     }
@@ -23,14 +23,14 @@ class MainActivity : ComponentActivity() {
 private fun PostBirdFrameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
-            primary = Color(0xFF78D6FF),
-            secondary = Color(0xFF9EE6B8),
-            background = Color(0xFF050607),
-            surface = Color(0xFF101317),
-            onPrimary = Color(0xFF071016),
-            onSecondary = Color(0xFF071016),
+            primary = Color(0xFF006D62),
+            secondary = Color(0xFFEFF8F4),
+            background = Color.Black,
+            surface = Color(0xFFEFF8F4),
+            onPrimary = Color.White,
+            onSecondary = Color(0xFF102427),
             onBackground = Color.White,
-            onSurface = Color.White
+            onSurface = Color(0xFF102427)
         ),
         content = content
     )

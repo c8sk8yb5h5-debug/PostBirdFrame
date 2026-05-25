@@ -64,7 +64,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -96,7 +95,7 @@ fun MatePadPreviewHomeScreen() {
     var currentYear by remember { mutableIntStateOf(2026) }
     var tick by remember { mutableIntStateOf(0) }
     val dimAlpha by animateFloatAsState(
-        targetValue = if (panelOpen || yearPickerOpen) 0.78f else 1f,
+        targetValue = if (panelOpen || yearPickerOpen) 0.84f else 1f,
         label = "previewDimAlpha"
     )
     val mediaFiles = remember(tick) { MediaReceiveStore(context).listMediaFiles() }
@@ -111,47 +110,30 @@ fun MatePadPreviewHomeScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF050607))
-            .padding(24.dp),
+            .background(Color.Black)
+            .padding(6.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(44.dp))
-                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(44.dp))
-                .background(Color(0xFF0D0F12))
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.Black)
         ) {
-            Box(
+            PreviewPlaybackArea(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(dimAlpha)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.radialGradient(
-                                listOf(Color.White.copy(alpha = 0.06f), Color.Transparent),
-                                radius = 900f
-                            )
-                        )
-                )
-                PreviewPlaybackArea(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(if (panelOpen) 0.66f else 1f)
-                )
-            }
+            )
 
-            PlaybackPill(modifier = Modifier.align(Alignment.TopStart).padding(20.dp))
+            PlaybackPill(modifier = Modifier.align(Alignment.TopStart).padding(start = 60.dp, top = 48.dp))
 
             PreviewCircleControls(
                 currentYear = currentYear,
                 onYearClick = { yearPickerOpen = true },
                 onMonthDayClick = { yearPickerOpen = true },
                 onSettingsClick = { panelOpen = !panelOpen },
-                modifier = Modifier.align(Alignment.BottomStart).padding(20.dp).zIndex(20f)
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 42.dp, bottom = 36.dp).zIndex(20f)
             )
 
             AnimatedVisibility(
@@ -189,9 +171,10 @@ fun MatePadPreviewHomeScreen() {
 
 @Composable
 private fun PreviewPlaybackArea(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.background(Color.Black)) {
+    Box(modifier = modifier.background(Color.Black), contentAlignment = Alignment.Center) {
         ReceivedMediaFrame(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            showCounter = false
         )
     }
 }
@@ -201,19 +184,13 @@ private fun PlaybackPill(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
-            .padding(horizontal = 14.dp, vertical = 9.dp),
-        horizontalArrangement = Arrangement.spacedBy(9.dp),
+            .background(Color.Transparent)
+            .padding(horizontal = 0.dp, vertical = 0.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(Color(0xFF6EE7B7), CircleShape)
-        )
-        Text("自动播放中", color = Color.White.copy(alpha = 0.78f))
-        Icon(Icons.Rounded.Pause, contentDescription = null, tint = Color.White.copy(alpha = 0.45f), modifier = Modifier.size(14.dp))
+        Icon(Icons.Rounded.Pause, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+        Text("自动播放中", color = Color.White, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -225,17 +202,15 @@ private fun PreviewCircleControls(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
         GlassCircleButton(onClick = onYearClick) {
-            Text(currentYear.toString(), color = Color.White, textAlign = TextAlign.Center)
-            Text("年", color = Color.White.copy(alpha = 0.65f), textAlign = TextAlign.Center)
+            Text(currentYear.toString(), color = Color.White, textAlign = TextAlign.Center, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
         }
         GlassCircleButton(onClick = onMonthDayClick) {
-            Text("05", color = Color.White, textAlign = TextAlign.Center)
-            Text("/25", color = Color.White.copy(alpha = 0.70f), textAlign = TextAlign.Center)
+            Text("1 / 6", color = Color.White, textAlign = TextAlign.Center, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
         }
         GlassCircleButton(onClick = onSettingsClick) {
-            Icon(Icons.Rounded.Settings, contentDescription = "设置", tint = Color.White, modifier = Modifier.size(26.dp))
+            Icon(Icons.Rounded.Settings, contentDescription = "设置", tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }
@@ -244,10 +219,10 @@ private fun PreviewCircleControls(
 private fun GlassCircleButton(onClick: () -> Unit, content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
-            .size(64.dp)
+            .size(82.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.12f))
-            .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+            .background(Color(0xFF101A24).copy(alpha = 0.96f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
             .clickable(onClick = onClick)
     ) {
         Column(
@@ -276,7 +251,7 @@ private fun PreviewSettingsPanel(
     var authCode by remember { mutableStateOf(initialSettings.authCode) }
     var authVisible by remember { mutableStateOf(false) }
     var autoCheck by remember { mutableStateOf(initialSettings.autoCheckEnabled) }
-    var status by remember { mutableStateOf("等待自动检查邮箱") }
+    var status by remember { mutableStateOf("更新检查失败") }
     var testing by remember { mutableStateOf(false) }
 
     fun toast(message: String) {
@@ -286,153 +261,169 @@ private fun PreviewSettingsPanel(
 
     Card(
         modifier = Modifier
-            .padding(end = 20.dp)
-            .width(350.dp)
+            .padding(end = 16.dp)
+            .width(470.dp)
             .fillMaxHeight()
-            .padding(vertical = 20.dp),
-        shape = RoundedCornerShape(34.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xB8101317)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 18.dp)
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF8F4).copy(alpha = 0.96f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TopPillButton("邮箱设置", Icons.Rounded.Mail, Modifier.weight(1f), onClick = {
+                    val saved = store.save(MailSettings(email.trim(), authCode, autoCheck, System.currentTimeMillis()))
+                    toast(if (saved) "邮箱设置已保存" else "邮箱设置保存失败")
+                })
+                TopPillButton("手动收件", Icons.Rounded.Download, Modifier.weight(1f), onClick = {
+                    context.startActivity(Intent(context, ReceiveMediaActivity::class.java))
+                })
+                TopPillButton("版本更新", Icons.Rounded.Refresh, Modifier.weight(1f), onClick = {
+                    context.startActivity(Intent(context, UpdateActivity::class.java))
+                })
+                TopPillButton("关闭", Icons.Rounded.Close, Modifier.weight(1f), onClick = onClose)
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                Text("版本 0.1.7", color = Color(0xFF33423C))
+                Text(status, color = Color(0xFF00796B))
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(0.dp, Color.Transparent)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("相框设置", color = Color.White)
-                    Text("邮箱收取 · 自动播放 · 更新", color = Color.White.copy(alpha = 0.55f))
+                Text("播放年份", color = Color(0xFF263532), style = androidx.compose.material3.MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                YearChip(currentYear.toString())
+                Text("-", color = Color(0xFF52625E), modifier = Modifier.padding(horizontal = 14.dp))
+                YearChip(currentYear.toString())
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(modifier = Modifier.size(18.dp).background(Color(0xFF168C86), CircleShape))
+                Text("$currentYear-1", color = Color(0xFF102427), style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+            }
+
+            if (mediaFiles.isEmpty()) {
+                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Text("暂无素材", color = Color(0xFF60726E))
                 }
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Rounded.Close, contentDescription = "关闭", tint = Color.White)
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(mediaFiles.take(20)) { file -> PreviewThumb(file) }
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                SettingsGlassSection(title = "QQ 邮箱接收", icon = { Icon(Icons.Rounded.Mail, null, tint = Color.White, modifier = Modifier.size(16.dp)) }) {
-                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("QQ 邮箱") }, singleLine = true)
-                    OutlinedTextField(
-                        value = authCode,
-                        onValueChange = { authCode = it },
-                        label = { Text("授权码") },
-                        singleLine = true,
-                        visualTransformation = if (authVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            IconButton(onClick = { authVisible = !authVisible }) {
-                                Icon(if (authVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, null)
-                            }
-                        }
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                val saved = store.save(MailSettings(email.trim(), authCode, autoCheck, System.currentTimeMillis()))
-                                toast(if (saved) "设置已保存" else "设置保存失败")
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) { Text("保存") }
-                        OutlinedButton(
-                            onClick = {
-                                if (email.isBlank() || authCode.isBlank()) {
-                                    toast("邮箱或授权码为空")
-                                    return@OutlinedButton
-                                }
-                                store.save(MailSettings(email.trim(), authCode, autoCheck, System.currentTimeMillis()))
-                                testing = true
-                                toast("正在测试邮箱连接...")
-                                scope.launch {
-                                    val result = withContext(Dispatchers.IO) { tester.testConnection(email.trim(), authCode) }
-                                    testing = false
-                                    toast(result.message)
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            enabled = !testing
-                        ) { Text("测试") }
+            CompactMailSettings(
+                email = email,
+                onEmailChange = { email = it },
+                authCode = authCode,
+                onAuthCodeChange = { authCode = it },
+                authVisible = authVisible,
+                onAuthVisibleChange = { authVisible = !authVisible },
+                autoCheck = autoCheck,
+                onAutoCheckChange = { autoCheck = it },
+                testing = testing,
+                onTest = {
+                    if (email.isBlank() || authCode.isBlank()) {
+                        toast("邮箱或授权码为空")
+                        return@CompactMailSettings
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { context.startActivity(Intent(context, ReceiveMediaActivity::class.java)) },
-                            modifier = Modifier.weight(1f)
-                        ) { Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(6.dp)); Text("立即检查") }
-                        OutlinedButton(
-                            onClick = { context.startActivity(Intent(context, UpdateActivity::class.java)) },
-                            modifier = Modifier.weight(1f)
-                        ) { Icon(Icons.Rounded.Download, null, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(6.dp)); Text("检查更新") }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("每 15 分钟自动检查", color = Color.White.copy(alpha = 0.72f), modifier = Modifier.weight(1f))
-                        Switch(checked = autoCheck, onCheckedChange = { autoCheck = it })
+                    store.save(MailSettings(email.trim(), authCode, autoCheck, System.currentTimeMillis()))
+                    testing = true
+                    toast("正在测试邮箱连接...")
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { tester.testConnection(email.trim(), authCode) }
+                        testing = false
+                        toast(result.message)
                     }
                 }
-
-                SettingsGlassSection(title = "播放控制") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SmallGlassButton("顺序播放", Modifier.weight(1f))
-                        SmallGlassButton("8 秒切换", Modifier.weight(1f))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SmallGlassButton("年份 $currentYear", Modifier.weight(1f), onClick = onOpenYearPicker)
-                        SmallGlassButton("全部日期", Modifier.weight(1f))
-                    }
-                }
-
-                SettingsGlassSection(title = "照片列表") {
-                    if (mediaFiles.isEmpty()) {
-                        Text("暂无素材", color = Color.White.copy(alpha = 0.58f))
-                    } else {
-                        LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.height(250.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(mediaFiles.take(12)) { file -> PreviewThumb(file) }
-                        }
-                    }
-                }
-            }
-
-            Text(
-                text = status,
-                color = Color.White.copy(alpha = 0.62f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
             )
         }
     }
 }
 
 @Composable
-private fun SettingsGlassSection(title: String, icon: @Composable (() -> Unit)? = null, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(24.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+private fun TopPillButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(999.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            icon?.invoke()
-            Text(title, color = Color.White)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            content()
-        }
+        Icon(icon, null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(text)
     }
 }
 
 @Composable
-private fun SmallGlassButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
-    OutlinedButton(onClick = onClick, modifier = modifier) { Text(text) }
+private fun YearChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color(0xFFE8F0EC))
+            .padding(horizontal = 32.dp, vertical = 10.dp)
+    ) {
+        Text(text, color = Color(0xFF263532), style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+    }
+}
+
+@Composable
+private fun CompactMailSettings(
+    email: String,
+    onEmailChange: (String) -> Unit,
+    authCode: String,
+    onAuthCodeChange: (String) -> Unit,
+    authVisible: Boolean,
+    onAuthVisibleChange: () -> Unit,
+    autoCheck: Boolean,
+    onAutoCheckChange: (Boolean) -> Unit,
+    testing: Boolean,
+    onTest: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(value = email, onValueChange = onEmailChange, label = { Text("QQ 邮箱") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = authCode,
+            onValueChange = onAuthCodeChange,
+            label = { Text("授权码") },
+            singleLine = true,
+            visualTransformation = if (authVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                IconButton(onClick = onAuthVisibleChange) {
+                    Icon(if (authVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, null)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("每 15 分钟自动检查", color = Color(0xFF33423C), modifier = Modifier.weight(1f))
+            Switch(checked = autoCheck, onCheckedChange = onAutoCheckChange)
+            OutlinedButton(onClick = onTest, enabled = !testing, modifier = Modifier.padding(start = 8.dp)) { Text("测试邮箱") }
+        }
+    }
 }
 
 @Composable
@@ -440,18 +431,20 @@ private fun PreviewThumb(file: File) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(82.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(16.dp))
+            .height(76.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(6.dp)
     ) {
         val lower = file.name.lowercase()
         val isImage = listOf(".jpg", ".jpeg", ".png", ".webp").any { lower.endsWith(it) }
         if (isImage) {
             val bitmap = remember(file.absolutePath, file.lastModified()) { BitmapFactory.decodeFile(file.absolutePath) }
-            if (bitmap != null) Image(bitmap.asImageBitmap(), null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            if (bitmap != null) Image(bitmap.asImageBitmap(), null, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
         } else {
-            Text("视频", color = Color.White.copy(alpha = 0.66f), modifier = Modifier.align(Alignment.Center))
+            Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(Color(0xFF7AA2B8)), contentAlignment = Alignment.Center) {
+                Text("视频", color = Color.White)
+            }
         }
     }
 }
@@ -468,7 +461,7 @@ private fun PreviewYearPicker(currentYear: Int, onClose: () -> Unit, onConfirm: 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.28f))
+            .background(Color.Black.copy(alpha = 0.30f))
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = { dragTotal = 0f },
@@ -491,7 +484,7 @@ private fun PreviewYearPicker(currentYear: Int, onClose: () -> Unit, onConfirm: 
         Card(
             modifier = Modifier.widthIn(min = 330.dp, max = 360.dp),
             shape = RoundedCornerShape(34.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.16f)),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.18f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 18.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {

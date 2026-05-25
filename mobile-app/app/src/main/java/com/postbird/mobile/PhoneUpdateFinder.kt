@@ -23,7 +23,7 @@ object PhoneUpdateFinder {
             if (info.versionCode <= currentVersionCode) continue
 
             val dir = File(cacheDir, "updates")
-            val binFile = PhoneMailParts.saveFirstUpdateAttachment(message, dir)
+            val binFile = PhoneMailParts.saveFirstUpdateAttachment(message, dir, info.attachmentName)
                 ?: throw IllegalStateException("已命中更新邮件，但未找到 ${PhoneUpdateRules.ATTACHMENT_KEY} 更新附件")
             val apkFile = File(dir, info.originalApkName)
             if (apkFile.exists()) apkFile.delete()

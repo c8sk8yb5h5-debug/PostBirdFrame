@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PostBirdFrameTheme {
-                MatePadPreviewHomeScreenV4()
+                MatePadPreviewHomeScreenV5()
             }
         }
     }

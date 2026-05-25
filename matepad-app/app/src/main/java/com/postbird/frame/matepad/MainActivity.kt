@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -126,8 +130,7 @@ private fun MatePadFrameScreen() {
             )
     ) {
         FrameMainContent(
-            modifier = Modifier.fillMaxSize().alpha(contentAlpha),
-            settingsVisible = settingsVisible
+            modifier = Modifier.fillMaxSize().alpha(contentAlpha)
         )
 
         PlaybackStatusPill(
@@ -156,18 +159,21 @@ private fun MatePadFrameScreen() {
         BottomLeftControls(
             settingsVisible = settingsVisible,
             onYearClick = {
-                selectorMode = "年份"
-                selectorVisible = !selectorVisible || selectorMode != "年份"
+                if (selectorVisible && selectorMode == "年份") {
+                    selectorVisible = false
+                } else {
+                    selectorMode = "年份"
+                    selectorVisible = true
+                }
                 settingsVisible = false
             },
-            onMonthClick = {
-                selectorMode = "月份"
-                selectorVisible = !selectorVisible || selectorMode != "月份"
-                settingsVisible = false
-            },
-            onDayClick = {
-                selectorMode = "日期"
-                selectorVisible = !selectorVisible || selectorMode != "日期"
+            onMonthDayClick = {
+                if (selectorVisible && selectorMode == "月日") {
+                    selectorVisible = false
+                } else {
+                    selectorMode = "月日"
+                    selectorVisible = true
+                }
                 settingsVisible = false
             },
             onSettingsClick = {
@@ -180,7 +186,7 @@ private fun MatePadFrameScreen() {
 }
 
 @Composable
-private fun FrameMainContent(modifier: Modifier, settingsVisible: Boolean) {
+private fun FrameMainContent(modifier: Modifier) {
     Box(modifier = modifier) {
         ReceivedMediaFrame(
             modifier = Modifier
@@ -210,15 +216,13 @@ private fun PlaybackStatusPill(modifier: Modifier = Modifier) {
 private fun BottomLeftControls(
     settingsVisible: Boolean,
     onYearClick: () -> Unit,
-    onMonthClick: () -> Unit,
-    onDayClick: () -> Unit,
+    onMonthDayClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        CircleTextButton("年", onYearClick)
-        CircleTextButton("月", onMonthClick)
-        CircleTextButton("日", onDayClick)
+        YearCircleButton(onClick = onYearClick)
+        MonthDayCircleButton(onClick = onMonthDayClick)
         FloatingActionButton(
             onClick = onSettingsClick,
             containerColor = Color(0xFF6E8F7C),
@@ -235,22 +239,71 @@ private fun BottomLeftControls(
 }
 
 @Composable
-private fun CircleTextButton(text: String, onClick: () -> Unit) {
+private fun YearCircleButton(onClick: () -> Unit) {
     FloatingActionButton(
         onClick = onClick,
         containerColor = Color.White.copy(alpha = 0.86f),
         contentColor = Color(0xFF2E3A32),
         shape = CircleShape,
-        modifier = Modifier.size(52.dp)
-    ) { Text(text, style = MaterialTheme.typography.titleMedium) }
+        modifier = Modifier.size(56.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("2026", style = MaterialTheme.typography.labelMedium)
+            Text("年", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun MonthDayCircleButton(onClick: () -> Unit) {
+    FloatingActionButton(
+        onClick = onClick,
+        containerColor = Color.White.copy(alpha = 0.86f),
+        contentColor = Color(0xFF2E3A32),
+        shape = CircleShape,
+        modifier = Modifier.size(56.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("05", style = MaterialTheme.typography.labelMedium)
+            Text("/25", style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
 
 @Composable
 private fun DateSelectorOverlay(mode: String, onClose: () -> Unit) {
+    var selectedValue by remember(mode) { mutableIntStateOf(if (mode == "年份") 2026 else 25) }
+    var dragTotal by remember { mutableFloatStateOf(0f) }
+
+    fun step(delta: Int) {
+        selectedValue = if (mode == "年份") {
+            (selectedValue + delta).coerceIn(1970, 2100)
+        } else {
+            (selectedValue + delta).coerceIn(1, 31)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF4F6F2).copy(alpha = 0.38f))
+            .pointerInput(mode) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragTotal = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragTotal += dragAmount
+                    },
+                    onDragEnd = {
+                        when {
+                            dragTotal <= -80f -> step(1)
+                            dragTotal >= 80f -> step(-1)
+                        }
+                        dragTotal = 0f
+                    },
+                    onDragCancel = { dragTotal = 0f }
+                )
+            }
             .padding(32.dp)
     ) {
         Card(
@@ -265,13 +318,30 @@ private fun DateSelectorOverlay(mode: String, onClose: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("选择$mode", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF2E3A32))
-                Text("2025", style = MaterialTheme.typography.titleMedium, color = Color(0xFF8A9A8F))
-                Text("2026", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF2E3A32))
-                Text("2027", style = MaterialTheme.typography.titleMedium, color = Color(0xFF8A9A8F))
-                Text("上下滑动选择将在下一轮接入。", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6F7A70), textAlign = TextAlign.Center)
-                OutlinedButton(onClick = onClose) { Text("关闭") }
+                SelectorValueText(text = selectorLabel(mode, selectedValue - 1), current = false)
+                SelectorValueText(text = selectorLabel(mode, selectedValue), current = true)
+                SelectorValueText(text = selectorLabel(mode, selectedValue + 1), current = false)
+                Text("上下滑动选择", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6F7A70), textAlign = TextAlign.Center)
+                OutlinedButton(onClick = onClose) { Text("完成") }
             }
         }
+    }
+}
+
+@Composable
+private fun SelectorValueText(text: String, current: Boolean) {
+    Text(
+        text = text,
+        style = if (current) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleMedium,
+        color = if (current) Color(0xFF2E3A32) else Color(0xFF8A9A8F)
+    )
+}
+
+private fun selectorLabel(mode: String, value: Int): String {
+    return if (mode == "年份") {
+        "$value"
+    } else {
+        "05 / ${value.coerceIn(1, 31).toString().padStart(2, '0')}"
     }
 }
 

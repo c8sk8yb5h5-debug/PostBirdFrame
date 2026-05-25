@@ -6,17 +6,24 @@ import javax.mail.Folder
 object PhoneUpdateFinder {
     fun find(folder: Folder, cacheDir: File): File {
         val messages = PhoneMessageWindow.latest(folder, PhoneBoxConfig.SCAN_LIMIT)
+        var matchedSubjectCount = 0
+        var parsedInfoCount = 0
+        val recentSubjects = mutableListOf<String>()
+
         for (message in messages) {
             val subject = message.subject ?: ""
+            if (recentSubjects.size < 5) recentSubjects.add(subject)
             if (!subject.contains(PhoneUpdateRules.SUBJECT_KEY)) continue
+            matchedSubjectCount += 1
             val text = PhoneMailParts.text(message.content)
             val info = PhoneUpdateParser.parse(text) ?: continue
+            parsedInfoCount += 1
             if (info.versionCode <= PhoneUpdateRules.CURRENT_VERSION_CODE) {
-                throw IllegalStateException("当前已是最新版本")
+                throw IllegalStateException("当前已是最新版本：邮件版本 code=${info.versionCode}，本机版本 code=${PhoneUpdateRules.CURRENT_VERSION_CODE}")
             }
             val dir = File(cacheDir, "updates")
             val binFile = PhoneMailParts.saveAttachment(message.content, info.attachmentName, dir)
-                ?: throw IllegalStateException("未找到手机端更新附件")
+                ?: throw IllegalStateException("已命中更新邮件，但未找到附件：${info.attachmentName}")
             val apkFile = File(dir, info.originalApkName)
             if (apkFile.exists()) apkFile.delete()
             if (!binFile.renameTo(apkFile)) throw IllegalStateException("更新包还原失败")
@@ -29,6 +36,8 @@ object PhoneUpdateFinder {
             }
             return apkFile
         }
-        throw IllegalStateException("未发现手机端可用更新包")
+
+        val titles = recentSubjects.joinToString(" | ") { it.take(40) }
+        throw IllegalStateException("未发现手机端可用更新包。扫描=${messages.size}，标题命中=${matchedSubjectCount}，正文解析=${parsedInfoCount}。最近标题：${titles}")
     }
 }

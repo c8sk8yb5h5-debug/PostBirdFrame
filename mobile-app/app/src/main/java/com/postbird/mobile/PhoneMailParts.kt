@@ -3,6 +3,7 @@ package com.postbird.mobile
 import java.io.File
 import javax.mail.Multipart
 import javax.mail.Part
+import javax.mail.internet.MimeUtility
 
 object PhoneMailParts {
     fun text(content: Any?): String {
@@ -19,22 +20,31 @@ object PhoneMailParts {
         }
     }
 
-    fun saveFirstUpdateAttachment(part: Part, dir: File): File? {
+    fun saveFirstUpdateAttachment(part: Part, dir: File, fallbackName: String): File? {
         if (part.isMimeType("multipart/*")) {
             val content = part.content
             if (content is Multipart) {
+                var fallback: File? = null
                 for (index in 0 until content.count) {
-                    val found = saveFirstUpdateAttachment(content.getBodyPart(index), dir)
-                    if (found != null) return found
+                    val found = saveFirstUpdateAttachment(content.getBodyPart(index), dir, fallbackName)
+                    if (found != null && found.name.contains(PhoneUpdateRules.ATTACHMENT_KEY, ignoreCase = true)) return found
+                    if (fallback == null) fallback = found
                 }
+                return fallback
             }
             return null
         }
 
-        val fileName = part.fileName.orEmpty().substringAfterLast('/')
-        if (!isPhoneUpdateAttachment(fileName)) return null
+        val fileName = normalizedFileName(part)
+        val canSave = isPreferredPhoneUpdateAttachment(fileName) || isSupportedUpdateAttachment(fileName) || isUnnamedAttachment(part)
+        if (!canSave) return null
+
         if (!dir.exists()) dir.mkdirs()
-        val outputFile = File(dir, fileName)
+        val saveName = when {
+            fileName.isNotBlank() && isSupportedUpdateAttachment(fileName) -> fileName
+            else -> fallbackName
+        }
+        val outputFile = File(dir, saveName)
         if (outputFile.exists()) outputFile.delete()
         part.inputStream.use { input ->
             outputFile.outputStream().use { output ->
@@ -50,11 +60,24 @@ object PhoneMailParts {
         return outputFile
     }
 
-    private fun isPhoneUpdateAttachment(fileName: String): Boolean {
-        val supportedSuffix = fileName.endsWith(".apk", ignoreCase = true) ||
+    private fun normalizedFileName(part: Part): String {
+        val raw = part.fileName.orEmpty()
+        val decoded = try { MimeUtility.decodeText(raw) } catch (_: Exception) { raw }
+        return decoded.substringAfterLast('/').substringAfterLast('\\').replace(" ", "").trim()
+    }
+
+    private fun isPreferredPhoneUpdateAttachment(fileName: String): Boolean {
+        return fileName.contains(PhoneUpdateRules.ATTACHMENT_KEY, ignoreCase = true) && isSupportedUpdateAttachment(fileName)
+    }
+
+    private fun isSupportedUpdateAttachment(fileName: String): Boolean {
+        return fileName.endsWith(".apk", ignoreCase = true) ||
             fileName.endsWith(".apk.zip", ignoreCase = true) ||
             fileName.endsWith(".apk.bin", ignoreCase = true) ||
             fileName.endsWith(".zip", ignoreCase = true)
-        return fileName.contains(PhoneUpdateRules.ATTACHMENT_KEY, ignoreCase = true) && supportedSuffix
+    }
+
+    private fun isUnnamedAttachment(part: Part): Boolean {
+        return Part.ATTACHMENT.equals(part.disposition, true) && part.fileName.isNullOrBlank()
     }
 }

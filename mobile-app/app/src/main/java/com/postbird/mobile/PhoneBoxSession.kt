@@ -13,9 +13,12 @@ object PhoneBoxSession {
         props["mail.${PhoneBoxConfig.PROTOCOL}.host"] = PhoneBoxConfig.HOST
         props["mail.${PhoneBoxConfig.PROTOCOL}.port"] = PhoneBoxConfig.PORT.toString()
         props["mail.${PhoneBoxConfig.PROTOCOL}.ssl.enable"] = "true"
-        props["mail.${PhoneBoxConfig.PROTOCOL}.connectiontimeout"] = "15000"
-        props["mail.${PhoneBoxConfig.PROTOCOL}.timeout"] = "20000"
-        props["mail.${PhoneBoxConfig.PROTOCOL}.writetimeout"] = "20000"
+        props["mail.${PhoneBoxConfig.PROTOCOL}.connectiontimeout"] = "30000"
+        props["mail.${PhoneBoxConfig.PROTOCOL}.timeout"] = "180000"
+        props["mail.${PhoneBoxConfig.PROTOCOL}.writetimeout"] = "180000"
+        props["mail.${PhoneBoxConfig.PROTOCOL}.partialfetch"] = "false"
+        props["mail.${PhoneBoxConfig.PROTOCOL}.fetchsize"] = "1048576"
+        props["mail.${PhoneBoxConfig.PROTOCOL}.connectionpooltimeout"] = "180000"
         props["mail.${PhoneBoxConfig.PROTOCOL}.ssl.protocols"] = "TLSv1.2"
         props["mail.${PhoneBoxConfig.PROTOCOL}.ssl.trust"] = PhoneBoxConfig.HOST
 

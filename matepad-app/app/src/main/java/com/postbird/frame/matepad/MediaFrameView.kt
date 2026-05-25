@@ -10,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -40,9 +45,25 @@ import kotlinx.coroutines.delay
 @Composable
 fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var refreshTick by remember { mutableStateOf(0) }
-    var playIndex by remember { mutableStateOf(0) }
+    var refreshTick by remember { mutableIntStateOf(0) }
+    var playIndex by remember { mutableIntStateOf(0) }
+    var manualControlTick by remember { mutableLongStateOf(0L) }
+    var dragTotal by remember { mutableFloatStateOf(0f) }
     val mediaFiles = remember(refreshTick) { MediaReceiveStore(context).listMediaFiles() }
+
+    fun moveToNext() {
+        if (mediaFiles.size > 1) {
+            playIndex = (playIndex + 1) % mediaFiles.size
+            manualControlTick = System.currentTimeMillis()
+        }
+    }
+
+    fun moveToPrevious() {
+        if (mediaFiles.size > 1) {
+            playIndex = (playIndex - 1 + mediaFiles.size) % mediaFiles.size
+            manualControlTick = System.currentTimeMillis()
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -51,9 +72,10 @@ fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(mediaFiles.size, playIndex) {
+    LaunchedEffect(mediaFiles.size, playIndex, manualControlTick) {
         if (mediaFiles.size > 1) {
-            delay(SLIDE_INTERVAL_MS)
+            val waitTime = if (manualControlTick > 0L) MANUAL_PAUSE_INTERVAL_MS else SLIDE_INTERVAL_MS
+            delay(waitTime)
             playIndex = (playIndex + 1) % mediaFiles.size
         }
     }
@@ -65,6 +87,23 @@ fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
         modifier = modifier
             .background(Color(0xFFFFFBF2), RoundedCornerShape(34.dp))
             .border(1.dp, Color(0xFFE4D8C4), RoundedCornerShape(34.dp))
+            .pointerInput(mediaFiles.size) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragTotal = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragTotal += dragAmount
+                    },
+                    onDragEnd = {
+                        when {
+                            dragTotal <= -SWIPE_THRESHOLD_PX -> moveToNext()
+                            dragTotal >= SWIPE_THRESHOLD_PX -> moveToPrevious()
+                        }
+                        dragTotal = 0f
+                    },
+                    onDragCancel = { dragTotal = 0f }
+                )
+            }
             .padding(24.dp)
     ) {
         if (currentFile == null) {
@@ -80,9 +119,7 @@ fun ReceivedMediaFrame(modifier: Modifier = Modifier) {
                     file = currentFile,
                     currentIndex = playIndex + 1,
                     totalCount = mediaFiles.size,
-                    onVideoFinished = {
-                        if (mediaFiles.size > 1) playIndex = (playIndex + 1) % mediaFiles.size
-                    },
+                    onVideoFinished = { moveToNext() },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -106,7 +143,7 @@ private fun PlayingReceivedMedia(
         }
 
         Text(
-            text = "$currentIndex / $totalCount",
+            text = "$currentIndex / $totalCount    左右滑动切换",
             style = MaterialTheme.typography.bodySmall,
             color = Color(0xFF64736A),
             modifier = Modifier.align(Alignment.BottomEnd)
@@ -225,3 +262,5 @@ private fun File.isVideoFile(): Boolean {
 
 private const val MEDIA_REFRESH_INTERVAL_MS = 5000L
 private const val SLIDE_INTERVAL_MS = 8000L
+private const val MANUAL_PAUSE_INTERVAL_MS = 12000L
+private const val SWIPE_THRESHOLD_PX = 80f

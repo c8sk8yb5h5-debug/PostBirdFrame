@@ -1,0 +1,94 @@
+name: Email Phone Update APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/email-phone-update.yml'
+
+jobs:
+  email-phone-update:
+    runs-on: ubuntu-latest
+    env:
+      PHONE_VERSION_CODE: ${{ github.run_number }}
+      PHONE_VERSION_NAME: 0.5.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Restore release keystore
+        working-directory: mobile-app
+        run: |
+          echo "${{ secrets.POSTBIRD_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+          cat > release-signing.properties <<EOF
+          storeFile=release-keystore.jks
+          storePassword=${{ secrets.POSTBIRD_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.POSTBIRD_KEY_ALIAS }}
+          keyPassword=${{ secrets.POSTBIRD_KEY_PASSWORD }}
+          EOF
+
+      - name: Build release APK
+        run: gradle -p mobile-app clean assembleRelease -PphoneVersionCode=$PHONE_VERSION_CODE -PphoneVersionName=$PHONE_VERSION_NAME
+
+      - name: Prepare package
+        run: |
+          mkdir -p phone-update-mail
+          cp mobile-app/app/build/outputs/apk/release/app-release.apk "phone-update-mail/PostBird-Phone-v${PHONE_VERSION_NAME}-code${PHONE_VERSION_CODE}.apk.bin"
+          echo "VERSION_NAME=$PHONE_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$PHONE_VERSION_CODE" >> "$GITHUB_ENV"
+          echo "ATTACHMENT_PATH=phone-update-mail/PostBird-Phone-v${PHONE_VERSION_NAME}-code${PHONE_VERSION_CODE}.apk.bin" >> "$GITHUB_ENV"
+
+      - name: Send phone update mail
+        env:
+          QQ_MAIL_USERNAME: ${{ secrets.QQ_MAIL_USERNAME }}
+          QQ_MAIL_AUTH_CODE: ${{ secrets.QQ_MAIL_AUTH_CODE }}
+          QQ_MAIL_TO: ${{ secrets.QQ_MAIL_TO }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+          ATTACHMENT_PATH: ${{ env.ATTACHMENT_PATH }}
+        run: |
+          python3 - <<'PY'
+          import os, smtplib, ssl, sys, time
+          from email.message import EmailMessage
+          from pathlib import Path
+          username = os.environ.get("QQ_MAIL_USERNAME", "").strip()
+          password = os.environ.get("QQ_MAIL_AUTH_CODE", "").strip().replace(" ", "")
+          recipient = (os.environ.get("QQ_MAIL_TO") or username).strip()
+          version_name = os.environ.get("VERSION_NAME", "").strip()
+          version_code = os.environ.get("VERSION_CODE", "").strip()
+          attachment_path = Path(os.environ.get("ATTACHMENT_PATH", ""))
+          msg = EmailMessage()
+          msg["From"] = username
+          msg["To"] = recipient
+          msg["Subject"] = f"PostBirdFrame Phone Update v{version_name} code={version_code}"
+          msg.set_content("\n".join([
+              "platform=phone",
+              f"versionName={version_name}",
+              f"versionCode={version_code}",
+              f"package={attachment_path.name}",
+              "signing=release"
+          ]))
+          msg.add_attachment(attachment_path.read_bytes(), maintype="application", subtype="octet-stream", filename=attachment_path.name)
+          for port, use_ssl in [(465, True), (587, False)]:
+              try:
+                  if use_ssl:
+                      smtp = smtplib.SMTP_SSL("smtp.qq.com", port, timeout=120, context=ssl.create_default_context())
+                  else:
+                      smtp = smtplib.SMTP("smtp.qq.com", port, timeout=120)
+                      smtp.starttls(context=ssl.create_default_context())
+                  with smtp:
+                      smtp.login(username, password)
+                      smtp.send_message(msg)
+                  sys.exit(0)
+              except Exception as exc:
+                  print(type(exc).__name__, exc)
+                  time.sleep(2)
+          raise SystemExit("QQ SMTP send failed")
+          PY

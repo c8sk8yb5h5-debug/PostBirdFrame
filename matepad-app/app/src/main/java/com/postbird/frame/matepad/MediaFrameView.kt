@@ -1,16 +1,9 @@
 package com.postbird.frame.matepad
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.VideoView
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -43,7 +36,6 @@ import com.postbird.frame.matepad.mail.MediaReceiveStore
 import java.io.File
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun ReceivedMediaFrame(
     modifier: Modifier = Modifier,
@@ -79,7 +71,7 @@ fun ReceivedMediaFrame(
         }
     }
 
-    LaunchedEffect(selectedFilePath) {
+    LaunchedEffect(selectedFilePath, mediaFiles.size) {
         if (!selectedFilePath.isNullOrBlank()) {
             val targetIndex = mediaFiles.indexOfFirst { it.absolutePath == selectedFilePath }
             if (targetIndex >= 0) {
@@ -124,24 +116,14 @@ fun ReceivedMediaFrame(
         if (currentFile == null) {
             EmptyReceivedMediaHint(Modifier.align(Alignment.Center))
         } else {
-            AnimatedContent(
-                targetState = currentFile.absolutePath,
-                transitionSpec = {
-                    (slideInHorizontally(animationSpec = tween(280)) { 24 } + fadeIn(animationSpec = tween(280))) togetherWith
-                        (slideOutHorizontally(animationSpec = tween(280)) { -24 } + fadeOut(animationSpec = tween(280)))
-                },
-                label = "mediaSlide",
+            PlayingReceivedMedia(
+                file = currentFile,
+                currentIndex = playIndex + 1,
+                totalCount = mediaFiles.size,
+                showCounter = showCounter,
+                onVideoFinished = { if (isPlaying) moveToNext() },
                 modifier = Modifier.fillMaxSize()
-            ) {
-                PlayingReceivedMedia(
-                    file = currentFile,
-                    currentIndex = playIndex + 1,
-                    totalCount = mediaFiles.size,
-                    showCounter = showCounter,
-                    onVideoFinished = { if (isPlaying) moveToNext() },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            )
         }
     }
 }
@@ -176,7 +158,7 @@ private fun PlayingReceivedMedia(
 @Composable
 private fun ImageMedia(file: File, modifier: Modifier = Modifier) {
     val bitmap = remember(file.absolutePath, file.lastModified()) {
-        BitmapFactory.decodeFile(file.absolutePath)
+        decodeSampledBitmap(file, MAIN_IMAGE_MAX_SIZE)
     }
     if (bitmap != null) {
         Image(
@@ -261,6 +243,27 @@ private fun MediaTextHint(text: String) {
     }
 }
 
+private fun decodeSampledBitmap(file: File, maxSize: Int): Bitmap? {
+    return try {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while ((bounds.outWidth / sample) > maxSize || (bounds.outHeight / sample) > maxSize) {
+            sample *= 2
+        }
+        BitmapFactory.decodeFile(
+            file.absolutePath,
+            BitmapFactory.Options().apply {
+                inSampleSize = sample.coerceAtLeast(1)
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
+        )
+    } catch (_: Exception) {
+        null
+    }
+}
+
 private fun File.isImageFile(): Boolean {
     val lower = name.lowercase()
     return listOf(".jpg", ".jpeg", ".png", ".webp", ".gif").any { lower.endsWith(it) }
@@ -271,7 +274,8 @@ private fun File.isVideoFile(): Boolean {
     return listOf(".mp4", ".mov", ".m4v", ".3gp").any { lower.endsWith(it) }
 }
 
-private const val MEDIA_REFRESH_INTERVAL_MS = 5000L
+private const val MEDIA_REFRESH_INTERVAL_MS = 60000L
 private const val SLIDE_INTERVAL_MS = 8000L
 private const val MANUAL_PAUSE_INTERVAL_MS = 12000L
 private const val SWIPE_THRESHOLD_PX = 80f
+private const val MAIN_IMAGE_MAX_SIZE = 1920

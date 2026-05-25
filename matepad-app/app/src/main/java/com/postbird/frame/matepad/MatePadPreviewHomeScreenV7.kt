@@ -2,6 +2,7 @@ package com.postbird.frame.matepad
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -204,5 +205,41 @@ private fun TopButtonV7(text: String, icon: ImageVector, modifier: Modifier = Mo
 @Composable
 private fun YearChipV7(text: String) { Box(Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0xFFE8F0EC)).padding(horizontal = 28.dp, vertical = 10.dp)) { Text(text, color = Color(0xFF263532), fontSize = 22.sp, fontWeight = FontWeight.Bold) } }
 @Composable
-private fun ThumbV7(file: File, selected: Boolean, onClick: () -> Unit) { Box(Modifier.fillMaxWidth().height(70.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).border(if (selected) 2.dp else 0.dp, if (selected) Color(0xFF168C86) else Color.Transparent, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(6.dp)) { val lower = file.name.lowercase(); val isImage = listOf(".jpg", ".jpeg", ".png", ".webp").any { lower.endsWith(it) }; if (isImage) { val bitmap = remember(file.absolutePath, file.lastModified()) { BitmapFactory.decodeFile(file.absolutePath) }; if (bitmap != null) Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop) } else Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(Color(0xFF7AA2B8)), contentAlignment = Alignment.Center) { Text("视频", color = Color.White) } } }
+private fun ThumbV7(file: File, selected: Boolean, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(70.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).border(if (selected) 2.dp else 0.dp, if (selected) Color(0xFF168C86) else Color.Transparent, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(6.dp)) {
+        val thumbnail = remember(file.absolutePath, file.lastModified()) { loadThumbnailBitmapV7(file) }
+        if (thumbnail != null) {
+            Image(thumbnail.asImageBitmap(), null, Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+        } else {
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(Color(0xFF7AA2B8)), contentAlignment = Alignment.Center) {
+                Text(if (isVideoFileV7(file)) "视频" else "文件", color = Color.White)
+            }
+        }
+    }
+}
+
+private fun loadThumbnailBitmapV7(file: File): android.graphics.Bitmap? {
+    val lower = file.name.lowercase()
+    return when {
+        listOf(".jpg", ".jpeg", ".png", ".webp", ".gif").any { lower.endsWith(it) } -> BitmapFactory.decodeFile(file.absolutePath)
+        isVideoFileV7(file) -> {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(file.absolutePath)
+                retriever.getFrameAtTime(1_000_000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            } catch (_: Exception) {
+                null
+            } finally {
+                try { retriever.release() } catch (_: Exception) {}
+            }
+        }
+        else -> null
+    }
+}
+
+private fun isVideoFileV7(file: File): Boolean {
+    val lower = file.name.lowercase()
+    return listOf(".mp4", ".mov", ".m4v", ".3gp").any { lower.endsWith(it) }
+}
+
 private fun readVersionNameV7(context: Context): String = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "未知" } catch (_: Exception) { "未知" }

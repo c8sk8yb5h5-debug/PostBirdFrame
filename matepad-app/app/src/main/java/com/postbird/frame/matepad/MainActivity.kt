@@ -67,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.postbird.frame.matepad.mail.QqMailConnectionTester
@@ -108,8 +109,10 @@ private fun PostBirdFrameTheme(content: @Composable () -> Unit) {
 @Composable
 private fun MatePadFrameScreen() {
     var settingsVisible by remember { mutableStateOf(false) }
+    var selectorVisible by remember { mutableStateOf(false) }
+    var selectorMode by remember { mutableStateOf("年份") }
     val contentAlpha by animateFloatAsState(
-        targetValue = if (settingsVisible) 0.72f else 1f,
+        targetValue = if (settingsVisible || selectorVisible) 0.72f else 1f,
         label = "contentAlpha"
     )
 
@@ -127,19 +130,101 @@ private fun MatePadFrameScreen() {
             settingsVisible = settingsVisible
         )
 
+        PlaybackStatusPill(
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 32.dp, top = 28.dp)
+        )
+
+        AnimatedVisibility(
+            visible = selectorVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize().zIndex(2f)
+        ) {
+            DateSelectorOverlay(
+                mode = selectorMode,
+                onClose = { selectorVisible = false }
+            )
+        }
+
         AnimatedVisibility(
             visible = settingsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.fillMaxSize().zIndex(2f)
+            modifier = Modifier.fillMaxSize().zIndex(3f)
         ) { SettingsOverlay(onClose = { settingsVisible = false }) }
 
+        BottomLeftControls(
+            settingsVisible = settingsVisible,
+            onYearClick = {
+                selectorMode = "年份"
+                selectorVisible = !selectorVisible || selectorMode != "年份"
+                settingsVisible = false
+            },
+            onMonthClick = {
+                selectorMode = "月份"
+                selectorVisible = !selectorVisible || selectorMode != "月份"
+                settingsVisible = false
+            },
+            onDayClick = {
+                selectorMode = "日期"
+                selectorVisible = !selectorVisible || selectorMode != "日期"
+                settingsVisible = false
+            },
+            onSettingsClick = {
+                settingsVisible = !settingsVisible
+                selectorVisible = false
+            },
+            modifier = Modifier.align(Alignment.BottomStart).padding(28.dp).zIndex(4f)
+        )
+    }
+}
+
+@Composable
+private fun FrameMainContent(modifier: Modifier, settingsVisible: Boolean) {
+    Box(modifier = modifier) {
+        ReceivedMediaFrame(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.76f)
+                .aspectRatio(16f / 10f)
+        )
+    }
+}
+
+@Composable
+private fun PlaybackStatusPill(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .background(Color.White.copy(alpha = 0.76f), RoundedCornerShape(24.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.62f), RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.size(8.dp).background(Color(0xFF6E8F7C), CircleShape))
+        Text("自动播放中", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF2E3A32))
+    }
+}
+
+@Composable
+private fun BottomLeftControls(
+    settingsVisible: Boolean,
+    onYearClick: () -> Unit,
+    onMonthClick: () -> Unit,
+    onDayClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        CircleTextButton("年", onYearClick)
+        CircleTextButton("月", onMonthClick)
+        CircleTextButton("日", onDayClick)
         FloatingActionButton(
-            onClick = { settingsVisible = !settingsVisible },
+            onClick = onSettingsClick,
             containerColor = Color(0xFF6E8F7C),
             contentColor = Color.White,
             shape = CircleShape,
-            modifier = Modifier.align(Alignment.BottomStart).padding(28.dp).size(64.dp).zIndex(3f)
+            modifier = Modifier.size(56.dp)
         ) {
             Icon(
                 imageVector = if (settingsVisible) Icons.Rounded.Close else Icons.Rounded.Settings,
@@ -150,29 +235,43 @@ private fun MatePadFrameScreen() {
 }
 
 @Composable
-private fun FrameMainContent(modifier: Modifier, settingsVisible: Boolean) {
-    Box(modifier = modifier) {
-        Column(
-            modifier = Modifier.align(Alignment.TopStart).padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+private fun CircleTextButton(text: String, onClick: () -> Unit) {
+    FloatingActionButton(
+        onClick = onClick,
+        containerColor = Color.White.copy(alpha = 0.86f),
+        contentColor = Color(0xFF2E3A32),
+        shape = CircleShape,
+        modifier = Modifier.size(52.dp)
+    ) { Text(text, style = MaterialTheme.typography.titleMedium) }
+}
+
+@Composable
+private fun DateSelectorOverlay(mode: String, onClose: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF4F6F2).copy(alpha = 0.38f))
+            .padding(32.dp)
+    ) {
+        Card(
+            modifier = Modifier.align(Alignment.Center).widthIn(min = 300.dp, max = 420.dp),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.86f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
         ) {
-            Text("邮差鸟相框", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF2E3A32))
-            Text("MatePad 横屏播放端 · QQ 邮箱接收与更新版", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF637568))
+            Column(
+                modifier = Modifier.padding(horizontal = 28.dp, vertical = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("选择$mode", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF2E3A32))
+                Text("2025", style = MaterialTheme.typography.titleMedium, color = Color(0xFF8A9A8F))
+                Text("2026", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF2E3A32))
+                Text("2027", style = MaterialTheme.typography.titleMedium, color = Color(0xFF8A9A8F))
+                Text("上下滑动选择将在下一轮接入。", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6F7A70), textAlign = TextAlign.Center)
+                OutlinedButton(onClick = onClose) { Text("关闭") }
+            }
         }
-
-        ReceivedMediaFrame(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(0.72f)
-                .aspectRatio(16f / 10f)
-        )
-
-        Text(
-            text = "设置页接收后，返回主界面查看最新照片",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF64736A),
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 34.dp)
-        )
     }
 }
 

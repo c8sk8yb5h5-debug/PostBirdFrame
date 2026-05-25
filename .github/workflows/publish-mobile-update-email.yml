@@ -41,13 +41,13 @@ jobs:
           from pathlib import Path
           p = Path('app/build.gradle.kts')
           s = p.read_text()
-          s = s.replace('versionCode = 4', 'versionCode = 7')
-          s = s.replace('versionName = "0.4.0"', 'versionName = "0.4.3"')
+          s = s.replace('versionCode = 4', 'versionCode = 8')
+          s = s.replace('versionName = "0.4.0"', 'versionName = "0.4.4"')
           p.write_text(s)
           r = Path('app/src/main/java/com/postbird/mobile/PhoneUpdateRules.kt')
           t = r.read_text()
-          t = t.replace('CURRENT_VERSION_CODE = 4', 'CURRENT_VERSION_CODE = 7')
-          t = t.replace('CURRENT_VERSION_NAME = "0.4.0"', 'CURRENT_VERSION_NAME = "0.4.3"')
+          t = t.replace('CURRENT_VERSION_CODE = 4', 'CURRENT_VERSION_CODE = 8')
+          t = t.replace('CURRENT_VERSION_NAME = "0.4.0"', 'CURRENT_VERSION_NAME = "0.4.4"')
           r.write_text(t)
           PY
 
@@ -96,7 +96,7 @@ jobs:
             "originalApkName": "${APK_NAME}",
             "sha256": "${SHA256}",
             "forceUpdate": false,
-            "releaseNotes": "手机端邮箱内更新加速验证版本 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。"
+            "releaseNotes": "手机端邮箱内更新测试版本 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。"
           }
           EOF
           cat > release-output/postbird-phone-update-email.txt <<EOF
@@ -110,7 +110,7 @@ jobs:
           originalApkName=${APK_NAME}
           sha256=${SHA256}
           forceUpdate=false
-          releaseNotes=手机端邮箱内更新加速验证版本 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。
+          releaseNotes=手机端邮箱内更新测试版本 ${VERSION_NAME}，APK 已作为 .apk.bin 邮件附件发送。
           EOF
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
@@ -129,7 +129,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK_PATH" --clobber
           else
-            gh release create "$TAG" "$APK_PATH" --title "PostBird Phone ${{ steps.release_info.outputs.version_name }}" --notes "手机端邮箱内更新加速验证版本 ${{ steps.release_info.outputs.version_name }}。邮箱更新以 .apk.bin 附件为准，GitHub Release 仅作为备份。"
+            gh release create "$TAG" "$APK_PATH" --title "PostBird Phone ${{ steps.release_info.outputs.version_name }}" --notes "手机端邮箱内更新测试版本 ${{ steps.release_info.outputs.version_name }}。邮箱更新以 .apk.bin 附件为准，GitHub Release 仅作为备份。"
           fi
 
       - name: Commit latest.json
@@ -142,7 +142,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "latest.json unchanged"
           else
-            git commit -m "Update phone updater speed verification manifest"
+            git commit -m "Update phone updater test manifest"
             git pull --rebase origin main || true
             git push || echo "latest.json push skipped; email delivery will continue"
           fi
@@ -170,7 +170,7 @@ jobs:
             originalApkName=${{ steps.release_info.outputs.apk_name }}
             sha256=${{ steps.release_info.outputs.sha256 }}
             forceUpdate=false
-            releaseNotes=手机端邮箱内更新加速验证版本 ${{ steps.release_info.outputs.version_name }}，APK 已作为 .apk.bin 邮件附件发送。
+            releaseNotes=手机端邮箱内更新测试版本 ${{ steps.release_info.outputs.version_name }}，APK 已作为 .apk.bin 邮件附件发送。
 
       - name: Upload signed update artifact
         uses: actions/upload-artifact@v4

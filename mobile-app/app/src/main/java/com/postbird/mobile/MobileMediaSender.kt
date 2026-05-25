@@ -3,12 +3,15 @@ package com.postbird.mobile
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import com.sun.mail.util.ByteArrayDataSource
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
 import javax.activation.DataHandler
+import javax.activation.DataSource
 import javax.mail.Message
 import javax.mail.Session
 import javax.mail.Transport
@@ -52,7 +55,7 @@ object MobileMediaSender {
                 val data = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: return PhoneSendResult(false, "无法读取文件：$fileName")
                 MimeBodyPart().also { part ->
-                    part.dataHandler = DataHandler(ByteArrayDataSource(data, type))
+                    part.dataHandler = DataHandler(MemoryAttachmentDataSource(data, type, fileName))
                     part.setFileName(fileName)
                     mixed.addBodyPart(part)
                 }
@@ -89,6 +92,19 @@ object MobileMediaSender {
             else -> "application/octet-stream"
         }
     }
+}
+
+private class MemoryAttachmentDataSource(
+    private val bytes: ByteArray,
+    private val mimeType: String,
+    private val fileName: String
+) : DataSource {
+    override fun getInputStream(): InputStream = ByteArrayInputStream(bytes)
+    override fun getOutputStream(): OutputStream {
+        throw UnsupportedOperationException("Read-only attachment")
+    }
+    override fun getContentType(): String = mimeType
+    override fun getName(): String = fileName
 }
 
 data class PhoneSendResult(val success: Boolean, val message: String)

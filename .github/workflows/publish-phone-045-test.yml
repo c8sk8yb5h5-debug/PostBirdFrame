@@ -15,6 +15,9 @@ jobs:
   publish-phone-045-test:
     runs-on: ubuntu-latest
     steps:
+      - name: Trigger note
+        run: echo "Trigger 0.4.6 test workflow after disabling old 0.4.4 workflow."
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4

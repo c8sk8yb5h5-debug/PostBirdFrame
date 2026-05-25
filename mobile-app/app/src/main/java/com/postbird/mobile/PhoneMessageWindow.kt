@@ -9,6 +9,6 @@ object PhoneMessageWindow {
         if (total <= 0) return emptyArray()
         val safeLimit = limit.coerceAtLeast(1)
         val start = kotlin.math.max(1, total - safeLimit + 1)
-        return folder.getMessages(start, total).asReversedArray()
+        return folder.getMessages(start, total).reversedArray()
     }
 }

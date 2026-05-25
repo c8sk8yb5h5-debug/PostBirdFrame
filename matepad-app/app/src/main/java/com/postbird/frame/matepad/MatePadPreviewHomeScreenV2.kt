@@ -4,9 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +46,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Mail
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Visibility
@@ -86,6 +97,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun MatePadPreviewHomeScreenV2() {
     val context = LocalContext.current
@@ -93,6 +105,8 @@ fun MatePadPreviewHomeScreenV2() {
     var yearPickerOpen by remember { mutableStateOf(false) }
     var currentYear by remember { mutableIntStateOf(2026) }
     var refreshTick by remember { mutableIntStateOf(0) }
+    var isPlaying by remember { mutableStateOf(true) }
+    var selectedFilePath by remember { mutableStateOf<String?>(null) }
     val mediaFiles = remember(refreshTick) { MediaReceiveStore(context).listMediaFiles() }
 
     LaunchedEffect(Unit) {
@@ -112,10 +126,14 @@ fun MatePadPreviewHomeScreenV2() {
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (yearPickerOpen) 0.72f else 1f),
-            showCounter = false
+            showCounter = false,
+            isPlaying = isPlaying,
+            selectedFilePath = selectedFilePath
         )
 
         AutoPlayLabel(
+            isPlaying = isPlaying,
+            onToggle = { isPlaying = !isPlaying },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 60.dp, top = 48.dp)
@@ -134,8 +152,8 @@ fun MatePadPreviewHomeScreenV2() {
 
         AnimatedVisibility(
             visible = settingsOpen,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = slideInHorizontally(animationSpec = tween(280)) { it } + fadeIn(animationSpec = tween(220)),
+            exit = slideOutHorizontally(animationSpec = tween(260)) { it } + fadeOut(animationSpec = tween(180)),
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .zIndex(30f)
@@ -143,6 +161,8 @@ fun MatePadPreviewHomeScreenV2() {
             ScreenshotStyleSettingsPanel(
                 mediaFiles = mediaFiles,
                 currentYear = currentYear,
+                selectedFilePath = selectedFilePath,
+                onSelectMedia = { file -> selectedFilePath = file.absolutePath },
                 onClose = { settingsOpen = false },
                 onOpenYearPicker = { yearPickerOpen = true }
             )
@@ -150,8 +170,8 @@ fun MatePadPreviewHomeScreenV2() {
 
         AnimatedVisibility(
             visible = yearPickerOpen,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = fadeIn(animationSpec = tween(180)) + scaleIn(animationSpec = tween(260), initialScale = 0.92f),
+            exit = fadeOut(animationSpec = tween(180)) + scaleOut(animationSpec = tween(200), targetScale = 0.94f),
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(50f)
@@ -169,10 +189,26 @@ fun MatePadPreviewHomeScreenV2() {
 }
 
 @Composable
-private fun AutoPlayLabel(modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.Pause, null, tint = Color.White, modifier = Modifier.size(22.dp))
-        Text("自动播放中", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+private fun AutoPlayLabel(
+    isPlaying: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+            null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp)
+        )
+        Text(if (isPlaying) "自动播放中" else "已暂停", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -216,6 +252,8 @@ private fun DarkCircleButton(onClick: () -> Unit, content: @Composable () -> Uni
 private fun ScreenshotStyleSettingsPanel(
     mediaFiles: List<File>,
     currentYear: Int,
+    selectedFilePath: String?,
+    onSelectMedia: (File) -> Unit,
     onClose: () -> Unit,
     onOpenYearPicker: () -> Unit
 ) {
@@ -259,7 +297,11 @@ private fun ScreenshotStyleSettingsPanel(
                 Text(status, color = Color(0xFF00796B), fontSize = 14.sp)
             }
 
-            AnimatedVisibility(showMailSettings) {
+            AnimatedVisibility(
+                visible = showMailSettings,
+                enter = fadeIn(animationSpec = tween(180)) + slideInVertically(animationSpec = tween(220)) { -18 },
+                exit = fadeOut(animationSpec = tween(160)) + slideOutVertically(animationSpec = tween(180)) { -18 }
+            ) {
                 CompactMailBox(
                     email = email,
                     onEmailChange = { email = it },
@@ -317,7 +359,7 @@ private fun ScreenshotStyleSettingsPanel(
                 }
             } else {
                 LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(mediaFiles.take(20)) { file -> PreviewThumb(file) }
+                    items(mediaFiles.take(20)) { file -> PreviewThumb(file = file, selected = file.absolutePath == selectedFilePath, onClick = { onSelectMedia(file) }) }
                 }
             }
         }
@@ -385,8 +427,17 @@ private fun CompactMailBox(
 }
 
 @Composable
-private fun PreviewThumb(file: File) {
-    Box(modifier = Modifier.fillMaxWidth().height(76.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(6.dp)) {
+private fun PreviewThumb(file: File, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(76.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .border(if (selected) 2.dp else 0.dp, if (selected) Color(0xFF168C86) else Color.Transparent, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(6.dp)
+    ) {
         val lower = file.name.lowercase()
         val isImage = listOf(".jpg", ".jpeg", ".png", ".webp").any { lower.endsWith(it) }
         if (isImage) {
@@ -398,6 +449,7 @@ private fun PreviewThumb(file: File) {
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun ScreenshotStyleYearPicker(currentYear: Int, onClose: () -> Unit, onConfirm: (Int) -> Unit) {
     var year by remember { mutableIntStateOf(currentYear) }
@@ -432,14 +484,28 @@ private fun ScreenshotStyleYearPicker(currentYear: Int, onClose: () -> Unit, onC
                 }
                 IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, contentDescription = "关闭", tint = Color.White) }
             }
-            Text((year - 1).toString(), color = Color.White.copy(alpha = 0.40f), fontSize = 22.sp)
-            Box(modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.18f)).padding(horizontal = 34.dp, vertical = 14.dp)) {
-                Text(year.toString(), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+            YearPickerValue((year - 1).toString(), current = false)
+            AnimatedContent(
+                targetState = year,
+                transitionSpec = {
+                    (slideInVertically(animationSpec = tween(220)) { 18 } + fadeIn(animationSpec = tween(220))) togetherWith
+                        (slideOutVertically(animationSpec = tween(180)) { -18 } + fadeOut(animationSpec = tween(180)))
+                },
+                label = "yearValue"
+            ) { value ->
+                Box(modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.18f)).padding(horizontal = 34.dp, vertical = 14.dp)) {
+                    Text(value.toString(), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                }
             }
-            Text((year + 1).toString(), color = Color.White.copy(alpha = 0.40f), fontSize = 22.sp)
+            YearPickerValue((year + 1).toString(), current = false)
             Button(onClick = { onConfirm(year) }, modifier = Modifier.fillMaxWidth()) { Text("应用年份") }
         }
     }
+}
+
+@Composable
+private fun YearPickerValue(text: String, current: Boolean) {
+    Text(text, color = if (current) Color.White else Color.White.copy(alpha = 0.40f), fontSize = if (current) 36.sp else 22.sp, fontWeight = if (current) FontWeight.Bold else FontWeight.Normal)
 }
 
 private fun readVersionName(context: Context): String {

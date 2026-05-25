@@ -1,10 +1,8 @@
 package com.postbird.mobile
 
 import java.io.File
-import javax.mail.BodyPart
 import javax.mail.Multipart
 import javax.mail.Part
-import javax.mail.internet.MimeUtility
 
 object PhoneMailParts {
     fun text(content: Any?): String {
@@ -21,32 +19,42 @@ object PhoneMailParts {
         }
     }
 
-    fun saveAttachment(content: Any?, expectedName: String, dir: File): File? {
-        if (content !is Multipart) return null
-        if (!dir.exists()) dir.mkdirs()
-        for (i in 0 until content.count) {
-            val part: BodyPart = content.getBodyPart(i)
-            val rawName = part.fileName
-            val name = if (rawName.isNullOrBlank()) "" else MimeUtility.decodeText(rawName)
-            if ((Part.ATTACHMENT.equals(part.disposition, true) || name.isNotBlank()) && matchesPhoneUpdateAttachment(name, expectedName)) {
-                val saveName = if (name.endsWith(".apk.bin")) name else expectedName
-                val file = File(dir, saveName)
-                part.inputStream.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
-                return file
+    fun saveFirstUpdateAttachment(part: Part, dir: File): File? {
+        if (part.isMimeType("multipart/*")) {
+            val content = part.content
+            if (content is Multipart) {
+                for (index in 0 until content.count) {
+                    val found = saveFirstUpdateAttachment(content.getBodyPart(index), dir)
+                    if (found != null) return found
+                }
             }
-            val nested = part.content
-            if (nested is Multipart) {
-                val found = saveAttachment(nested, expectedName, dir)
-                if (found != null) return found
+            return null
+        }
+
+        val fileName = part.fileName.orEmpty().substringAfterLast('/')
+        if (!isPhoneUpdateAttachment(fileName)) return null
+        if (!dir.exists()) dir.mkdirs()
+        val outputFile = File(dir, fileName)
+        if (outputFile.exists()) outputFile.delete()
+        part.inputStream.use { input ->
+            outputFile.outputStream().use { output ->
+                val buffer = ByteArray(65536)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                }
+                output.flush()
             }
         }
-        return null
+        return outputFile
     }
 
-    private fun matchesPhoneUpdateAttachment(name: String, expectedName: String): Boolean {
-        val normalName = name.replace(" ", "")
-        val normalExpected = expectedName.replace(" ", "")
-        if (normalName == normalExpected) return true
-        return normalName.contains("PostBird-Phone") && normalName.endsWith(".apk.bin")
+    private fun isPhoneUpdateAttachment(fileName: String): Boolean {
+        val supportedSuffix = fileName.endsWith(".apk", ignoreCase = true) ||
+            fileName.endsWith(".apk.zip", ignoreCase = true) ||
+            fileName.endsWith(".apk.bin", ignoreCase = true) ||
+            fileName.endsWith(".zip", ignoreCase = true)
+        return fileName.contains(PhoneUpdateRules.ATTACHMENT_KEY, ignoreCase = true) && supportedSuffix
     }
 }

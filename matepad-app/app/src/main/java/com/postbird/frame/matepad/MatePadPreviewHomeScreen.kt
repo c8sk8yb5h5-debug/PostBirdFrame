@@ -2,7 +2,6 @@ package com.postbird.frame.matepad
 
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.os.Bundle
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -241,26 +241,24 @@ private fun PreviewCircleControls(
 }
 
 @Composable
-private fun GlassCircleButton(onClick: () -> Unit, content: @Composable ColumnScopeLike.() -> Unit) {
+private fun GlassCircleButton(onClick: () -> Unit, content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
             .size(64.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.12f))
             .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-            .pointerInput(Unit) {}
+            .clickable(onClick = onClick)
     ) {
-        androidx.compose.foundation.clickable(onClick = onClick, interactionSource = null, indication = null) {}
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            content = { ColumnScopeLike.content() }
-        )
+            verticalArrangement = Arrangement.Center
+        ) {
+            content()
+        }
     }
 }
-
-private object ColumnScopeLike
 
 @Composable
 private fun PreviewSettingsPanel(
@@ -412,7 +410,7 @@ private fun PreviewSettingsPanel(
 }
 
 @Composable
-private fun SettingsGlassSection(title: String, icon: @Composable (() -> Unit)? = null, content: @Composable ColumnScopeLike.() -> Unit) {
+private fun SettingsGlassSection(title: String, icon: @Composable (() -> Unit)? = null, content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -426,7 +424,9 @@ private fun SettingsGlassSection(title: String, icon: @Composable (() -> Unit)? 
             icon?.invoke()
             Text(title, color = Color.White)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = { ColumnScopeLike.content() })
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            content()
+        }
     }
 }
 

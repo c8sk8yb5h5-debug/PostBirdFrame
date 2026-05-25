@@ -5,7 +5,7 @@ import javax.mail.Folder
 
 object PhoneUpdateFinder {
     fun find(folder: Folder, cacheDir: File): File {
-        val messages = folder.messages.takeLast(PhoneBoxConfig.SCAN_LIMIT).asReversed()
+        val messages = PhoneMessageWindow.latest(folder, PhoneBoxConfig.SCAN_LIMIT)
         for (message in messages) {
             val subject = message.subject ?: ""
             if (!subject.contains(PhoneUpdateRules.SUBJECT_KEY)) continue

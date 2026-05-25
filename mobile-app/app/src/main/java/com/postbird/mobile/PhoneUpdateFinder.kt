@@ -24,11 +24,11 @@ object PhoneUpdateFinder {
                 throw IllegalStateException("当前已是最新版本：邮件版本 code=${info.versionCode}，本机版本 code=${PhoneUpdateRules.CURRENT_VERSION_CODE}")
             }
             val dir = File(cacheDir, "updates")
-            val binFile = PhoneMailParts.saveAttachment(message.content, info.attachmentName, dir)
-                ?: throw IllegalStateException("已命中更新邮件，但未找到附件：${info.attachmentName}")
+            val binFile = PhoneMailParts.saveFirstUpdateAttachment(message, dir)
+                ?: throw IllegalStateException("已命中更新邮件，但未找到 ${PhoneUpdateRules.ATTACHMENT_KEY} 更新附件")
             val apkFile = File(dir, info.originalApkName)
             if (apkFile.exists()) apkFile.delete()
-            if (!binFile.renameTo(apkFile)) throw IllegalStateException("更新包还原失败")
+            binFile.copyTo(apkFile, overwrite = true)
             if (info.sha256.isNotBlank()) {
                 val actual = PhoneHash.sha256(apkFile)
                 if (!actual.equals(info.sha256, ignoreCase = true)) {

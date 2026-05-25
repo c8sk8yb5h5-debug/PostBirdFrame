@@ -143,9 +143,9 @@ private fun PlayingReceivedMedia(
         }
 
         Text(
-            text = "$currentIndex / $totalCount    左右滑动切换",
+            text = "$currentIndex / $totalCount",
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF64736A),
+            color = Color(0xFF64736A).copy(alpha = 0.72f),
             modifier = Modifier.align(Alignment.BottomEnd)
         )
     }
@@ -219,7 +219,7 @@ private fun EmptyReceivedMediaHint(modifier: Modifier = Modifier) {
             color = Color(0xFF2E3A32)
         )
         Text(
-            text = "手机端发送照片或视频邮件后，在设置页点击“立即检查”即可接收。",
+            text = "打开设置并点击立即检查即可接收照片 / 视频。",
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF66756A),
             textAlign = TextAlign.Center
